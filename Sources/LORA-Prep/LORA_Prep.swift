@@ -93,44 +93,6 @@ func writePNG(_ url: URL, _ cg: CGImage) throws {
     }
 }
 
-/// Renders the average color of a CIImage region (used by both whole-image and edge-average)
-private func regionAverageColor(_ image: CIImage, rect: CGRect) -> CIColor {
-    let filter = CIFilter.areaAverage()
-    filter.inputImage = image.cropped(to: rect)
-    filter.extent = rect
-    guard let out = filter.outputImage else { return CIColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1) }
-    var bitmap = [UInt8](repeating: 0, count: 4)
-    ctx.render(out, toBitmap: &bitmap, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBA8, colorSpace: CGColorSpaceCreateDeviceRGB())
-    return CIColor(red: CGFloat(bitmap[0]) / 255.0, green: CGFloat(bitmap[1]) / 255.0, blue: CGFloat(bitmap[2]) / 255.0, alpha: 1.0)
-}
-
-/// Whole-image average (kept for completeness)
-func averageColor(_ image: CIImage) -> CIColor {
-    return regionAverageColor(image, rect: image.extent)
-}
-
-/// Edge-average color: averages a thin band along all four edges (default 4% of min dimension)
-func edgeAverageColor(_ image: CIImage, borderFrac: CGFloat = 0.04) -> CIColor {
-    let e = image.extent
-    let bw = max(1.0, min(e.width, e.height) * borderFrac)
-    let top = CGRect(x: e.minX, y: e.maxY - bw, width: e.width, height: bw)
-    let bottom = CGRect(x: e.minX, y: e.minY, width: e.width, height: bw)
-    let left = CGRect(x: e.minX, y: e.minY, width: bw, height: e.height)
-    let right = CGRect(x: e.maxX - bw, y: e.minY, width: bw, height: e.height)
-
-    // Average the four bands by sampling each then averaging their RGBA components
-    let cTop = regionAverageColor(image, rect: top)
-    let cBottom = regionAverageColor(image, rect: bottom)
-    let cLeft = regionAverageColor(image, rect: left)
-    let cRight = regionAverageColor(image, rect: right)
-
-    func comp(_ f: (CIColor) -> CGFloat) -> CGFloat {
-        let vals = [f(cTop), f(cBottom), f(cLeft), f(cRight)]
-        return vals.reduce(0, +) / CGFloat(vals.count)
-    }
-    return CIColor(red: comp { $0.red }, green: comp { $0.green }, blue: comp { $0.blue }, alpha: 1)
-}
-
 // MARK: - Vision helpers
 
 struct FaceBox {
@@ -342,33 +304,6 @@ func personMask(for ci: CIImage) throws -> CIImage? {
     return mask.transformed(by: CGAffineTransform(scaleX: scaleX, y: scaleY))
 }
 
-// MARK: - Geom ops
-
-func clampSquareAround(face: CGRect, in img: CGRect, marginK: CGFloat) -> CGRect {
-    // Proposed side with margin
-    var side = max(face.width, face.height) * marginK
-    // Python parity: clamp side between half of min(imgW,imgH) and 110% of max(imgW,imgH)
-    let minSide = min(img.width, img.height) / 2.0
-    let maxSide = max(img.width, img.height) * 1.10
-    side = max(minSide, min(side, maxSide))
-
-    let cx = face.midX, cy = face.midY
-    var x1 = cx - side/2, y1 = cy - side/2
-    var x2 = cx + side/2, y2 = cy + side/2
-
-    // clamp to image bounds by shifting the square
-    if x1 < img.minX { let d = img.minX - x1; x1 += d; x2 += d }
-    if y1 < img.minY { let d = img.minY - y1; y1 += d; y2 += d }
-    if x2 > img.maxX { let d = x2 - img.maxX; x1 -= d; x2 -= d }
-    if y2 > img.maxY { let d = y2 - img.maxY; y1 -= d; y2 -= d }
-
-    // Ensure we still have a square fully inside image (shrink if necessary)
-    let finalSide = min(x2 - x1, y2 - y1)
-    let nx1 = max(img.minX, min(cx - finalSide/2, img.maxX - finalSide))
-    let ny1 = max(img.minY, min(cy - finalSide/2, img.maxY - finalSide))
-    return CGRect(x: nx1, y: ny1, width: finalSide, height: finalSide)
-}
-
 func scaleLongSide(_ ci: CIImage, to target: CGFloat) -> CIImage {
     let w = ci.extent.width, h = ci.extent.height
     let longSide = max(w, h)
@@ -377,18 +312,41 @@ func scaleLongSide(_ ci: CIImage, to target: CGFloat) -> CIImage {
     return ci.transformed(by: CGAffineTransform(scaleX: s, y: s))
 }
 
-func centerCropOrPadToSquare(_ ci: CIImage, size: CGFloat, padColor: CIColor) -> CIImage {
-    let w = ci.extent.width, h = ci.extent.height
-    if w >= size && h >= size {
-        // center-crop
-        let x = (w - size)/2, y = (h - size)/2
-        return ci.cropped(to: CGRect(x: x, y: y, width: size, height: size))
-    } else {
-        // pad
-        let bg = CIImage(color: padColor).cropped(to: CGRect(x: 0, y: 0, width: size, height: size))
-        let ox = (size - w)/2, oy = (size - h)/2
-        return ci.transformed(by: CGAffineTransform(translationX: ox, y: oy)).composited(over: bg)
-    }
+func padToSquareTransparent(_ ci: CIImage, size: CGFloat) -> CIImage {
+    let extent = ci.extent.standardized
+    let w = extent.width
+    let h = extent.height
+    guard size >= w - 0.001 && size >= h - 0.001 else { return ci }
+    let ox = (size - w) / 2 - extent.minX
+    let oy = (size - h) / 2 - extent.minY
+    let background = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
+        .cropped(to: CGRect(x: 0, y: 0, width: size, height: size))
+    let translated = ci.transformed(by: CGAffineTransform(translationX: ox, y: oy))
+    return translated.composited(over: background).cropped(to: background.extent)
+}
+
+func centerImageOnFace(_ ci: CIImage, faceRect: CGRect) -> CIImage {
+    let extent = ci.extent.standardized
+    let face = faceRect.standardized
+
+    let left = face.midX - extent.minX
+    let right = extent.maxX - face.midX
+    let bottom = face.midY - extent.minY
+    let top = extent.maxY - face.midY
+
+    let padLeft = max(0, right - left)
+    let padRight = max(0, left - right)
+    let padBottom = max(0, top - bottom)
+    let padTop = max(0, bottom - top)
+
+    let newWidth = extent.width + padLeft + padRight
+    let newHeight = extent.height + padTop + padBottom
+
+    let translated = ci.transformed(by: CGAffineTransform(translationX: padLeft - extent.minX,
+                                                          y: padBottom - extent.minY))
+    let background = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
+        .cropped(to: CGRect(x: 0, y: 0, width: newWidth, height: newHeight))
+    return translated.composited(over: background).cropped(to: background.extent)
 }
 
 // MARK: - Pipeline
@@ -432,53 +390,34 @@ struct Pipeline {
 
     func processOne(inputURL: URL, outputURL: URL) throws {
         var (ci, _) = try loadCIImage(inputURL)
-        // Ensure we work in a standard bounds origin
-        ci = ci.transformed(by: .identity)
-        ci = scaleLongSide(ci, to: args.size)
-        let basePadColor = edgeAverageColor(ci)
+        // Normalize origin to (0,0)
+        ci = ci.transformed(by: CGAffineTransform(translationX: -ci.extent.minX, y: -ci.extent.minY))
 
-        // 1) FACE PATH
-        var faceRect: CGRect? = nil
-        if let box = try? detectLargestFace(in: ci) {
-            faceRect = box.rect
-        }
-
-        let final: CIImage
-        if let fr = faceRect {
+        let detectedFace = try detectLargestFace(in: ci)
+        if let fr = detectedFace?.rect {
             print("FACE_FOUND box=(\(Int(fr.minX)),\(Int(fr.minY)),\(Int(fr.maxX)),\(Int(fr.maxY))) size=(\(Int(ci.extent.width))x\(Int(ci.extent.height)))")
-            // Face-aware square around face with margin + pad background if needed
-            let square = clampSquareAround(face: fr, in: ci.extent, marginK: 1.9)
-            let padColor = basePadColor
-            // Crop if square fully inside; else pad canvas to square then crop
-            var stage: CIImage
-            if ci.extent.contains(square) {
-                stage = ci.cropped(to: square)
-            } else {
-                // Make a square canvas and paste the crop area (pad)
-                let side = max(square.width, square.height)
-                let bg = CIImage(color: padColor).cropped(to: CGRect(origin: .zero, size: CGSize(width: side, height: side)))
-                let translated = ci.cropped(to: ci.extent.intersection(square))
-                    .transformed(by: CGAffineTransform(translationX: max(0, -square.minX), y: max(0, -square.minY)))
-                stage = translated.composited(over: bg)
-            }
-            // Resize to output size
-            let scale = args.size / max(stage.extent.width, stage.extent.height)
-            let stageResized = stage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-            // Optional: background removal (Vision segmentation) → transparent background
-            if args.removeBackground, #available(macOS 12.0, *), let mask = try? personMask(for: stageResized) {
-                let transparent = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
-                    .cropped(to: CGRect(x: 0, y: 0, width: args.size, height: args.size))
-                final = stageResized.applyingFilter("CIBlendWithMask", parameters: [
-                    kCIInputBackgroundImageKey: transparent,
-                    kCIInputMaskImageKey: mask
-                ])
-            } else {
-                final = stageResized
-            }
         } else {
             print("NO_FACE size=(\(Int(ci.extent.width))x\(Int(ci.extent.height)))")
-            // 2) NO-FACE PATH: long side already scaled; center-crop or pad to 1024
-            final = centerCropOrPadToSquare(ci, size: args.size, padColor: basePadColor)
+        }
+
+        var working = ci
+        if let fr = detectedFace?.rect {
+            working = centerImageOnFace(working, faceRect: fr)
+        }
+
+        working = scaleLongSide(working, to: args.size)
+        working = padToSquareTransparent(working, size: args.size)
+
+        let final: CIImage
+        if args.removeBackground, #available(macOS 12.0, *), let mask = try? personMask(for: working) {
+            let transparent = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
+                .cropped(to: CGRect(x: 0, y: 0, width: args.size, height: args.size))
+            final = working.applyingFilter("CIBlendWithMask", parameters: [
+                kCIInputBackgroundImageKey: transparent,
+                kCIInputMaskImageKey: mask
+            ])
+        } else {
+            final = working
         }
 
         // Render and write PNG (no metadata)
