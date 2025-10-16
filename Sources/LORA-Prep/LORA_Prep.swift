@@ -371,8 +371,9 @@ func clampSquareAround(face: CGRect, in img: CGRect, marginK: CGFloat) -> CGRect
 
 func scaleLongSide(_ ci: CIImage, to target: CGFloat) -> CIImage {
     let w = ci.extent.width, h = ci.extent.height
-    let s = target / max(w, h)
-    if abs(s - 1) < 0.0001 { return ci }
+    let longSide = max(w, h)
+    if longSide <= target + 0.0001 { return ci }
+    let s = target / longSide
     return ci.transformed(by: CGAffineTransform(scaleX: s, y: s))
 }
 
@@ -433,6 +434,8 @@ struct Pipeline {
         var (ci, _) = try loadCIImage(inputURL)
         // Ensure we work in a standard bounds origin
         ci = ci.transformed(by: .identity)
+        ci = scaleLongSide(ci, to: args.size)
+        let basePadColor = edgeAverageColor(ci)
 
         // 1) FACE PATH
         var faceRect: CGRect? = nil
@@ -445,7 +448,7 @@ struct Pipeline {
             print("FACE_FOUND box=(\(Int(fr.minX)),\(Int(fr.minY)),\(Int(fr.maxX)),\(Int(fr.maxY))) size=(\(Int(ci.extent.width))x\(Int(ci.extent.height)))")
             // Face-aware square around face with margin + pad background if needed
             let square = clampSquareAround(face: fr, in: ci.extent, marginK: 1.9)
-            let padColor = edgeAverageColor(ci)
+            let padColor = basePadColor
             // Crop if square fully inside; else pad canvas to square then crop
             var stage: CIImage
             if ci.extent.contains(square) {
@@ -474,10 +477,8 @@ struct Pipeline {
             }
         } else {
             print("NO_FACE size=(\(Int(ci.extent.width))x\(Int(ci.extent.height)))")
-            // 2) NO-FACE PATH: long side → 1024, then crop center or pad to 1024
-            let scaled = scaleLongSide(ci, to: args.size)
-            let padColor = edgeAverageColor(ci)
-            final = centerCropOrPadToSquare(scaled, size: args.size, padColor: padColor)
+            // 2) NO-FACE PATH: long side already scaled; center-crop or pad to 1024
+            final = centerCropOrPadToSquare(ci, size: args.size, padColor: basePadColor)
         }
 
         // Render and write PNG (no metadata)
