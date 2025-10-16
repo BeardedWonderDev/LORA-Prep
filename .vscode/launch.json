@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:LORA-Prep}",
+            "name": "Debug LoRAPrep",
+            "program": "${workspaceFolder:LORA-Prep}/.build/debug/LoRAPrep",
+            "preLaunchTask": "swift: Build Debug LoRAPrep"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:LORA-Prep}",
+            "name": "Release LoRAPrep",
+            "program": "${workspaceFolder:LORA-Prep}/.build/release/LoRAPrep",
+            "preLaunchTask": "swift: Build Release LoRAPrep"
+        }
+    ]
+}
