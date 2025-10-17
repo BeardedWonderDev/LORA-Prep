@@ -3,6 +3,7 @@ import AppKit
 import Vision
 import CoreImage
 import CoreImage.CIFilterBuiltins
+import CoreML
 import ImageIO
 import UniformTypeIdentifiers
 
@@ -13,12 +14,14 @@ struct Args {
     var loraName: String
     var removeBackground: Bool = false
     var size: CGFloat = 1024
+    var superResModel: URL?
 
     static func parse() -> Args? {
         var input: URL?
         var name: String?
         var removeBG = false
         var size: CGFloat = 1024
+        var superResModel: URL?
 
         var it = CommandLine.arguments.dropFirst().makeIterator()
         while let a = it.next() {
@@ -31,11 +34,13 @@ struct Args {
                 removeBG = true
             case "--size", "-s":
                 if let v = it.next(), let f = Double(v) { size = CGFloat(f) }
+            case "--superres-model":
+                if let path = it.next() { superResModel = URL(fileURLWithPath: path) }
             case "--help", "-h":
                 print("""
                 LoRAPrep
                 Usage:
-                  LoRAPrep --input <folder> --lora-name <NAME> [--remove-background] [--size 1024]
+                  LoRAPrep --input <folder> --lora-name <NAME> [--remove-background] [--size 1024] [--superres-model /path/to/model.mlmodelc]
                 """)
                 return nil
             default:
@@ -46,7 +51,9 @@ struct Args {
             print("Missing --input or --lora-name. Use --help.")
             return nil
         }
-        return Args(input: input, loraName: name, removeBackground: removeBG, size: size)
+        var args = Args(input: input, loraName: name, removeBackground: removeBG, size: size)
+        args.superResModel = superResModel
+        return args
     }
 }
 
@@ -254,6 +261,55 @@ private func detectFaceCandidates(in ci: CIImage, angles: [CGFloat]) throws -> [
     }
 }
 
+// MARK: - Super Resolution
+
+final class SuperResolutionEngine {
+    private let request: VNCoreMLRequest
+
+    init(modelURL: URL) throws {
+        let compiled: URL
+        if modelURL.pathExtension == "mlmodelc" {
+            compiled = modelURL
+        } else {
+            compiled = try MLModel.compileModel(at: modelURL)
+        }
+        let model = try MLModel(contentsOf: compiled)
+        let vnModel = try VNCoreMLModel(for: model)
+        request = VNCoreMLRequest(model: vnModel)
+        request.imageCropAndScaleOption = .scaleFit
+        request.usesCPUOnly = false
+    }
+
+    private func upscaleOnce(_ ci: CIImage) throws -> CIImage {
+        guard let cg = ctx.createCGImage(ci, from: ci.extent) else {
+            throw NSError(domain: "SuperRes", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to create CGImage for super-resolution"])
+        }
+        let handler = VNImageRequestHandler(cgImage: cg, orientation: .up, options: [:])
+        try handler.perform([request])
+        guard let obs = request.results?.first as? VNPixelBufferObservation else {
+            throw NSError(domain: "SuperRes", code: 2, userInfo: [NSLocalizedDescriptionKey: "Super-resolution model returned no pixel buffer"])
+        }
+        let output = CIImage(cvPixelBuffer: obs.pixelBuffer)
+        return output.transformed(by: CGAffineTransform(translationX: -output.extent.minX, y: -output.extent.minY))
+    }
+
+    func upscaleUntilShortSideMeetsTarget(_ ci: CIImage, target: CGFloat) -> CIImage {
+        var current = ci
+        var iterations = 0
+        while min(current.extent.width, current.extent.height) + 0.5 < target && iterations < 4 {
+            guard let actual = try? upscaleOnce(current) else { break }
+            let gainW = actual.extent.width / current.extent.width
+            let gainH = actual.extent.height / current.extent.height
+            if gainW <= 1.01 && gainH <= 1.01 {
+                break
+            }
+            current = actual.transformed(by: CGAffineTransform(translationX: -actual.extent.minX, y: -actual.extent.minY))
+            iterations += 1
+        }
+        return current
+    }
+}
+
 func detectLargestFace(in ci: CIImage) throws -> FaceBox? {
     let angles: [CGFloat] = [-15, 0, 15]
     let candidates = try detectFaceCandidates(in: ci, angles: angles)
@@ -312,6 +368,14 @@ func scaleLongSide(_ ci: CIImage, to target: CGFloat) -> CIImage {
     return ci.transformed(by: CGAffineTransform(scaleX: s, y: s))
 }
 
+func scaleShortSide(_ ci: CIImage, to target: CGFloat) -> CIImage {
+    let w = ci.extent.width, h = ci.extent.height
+    let shortSide = min(w, h)
+    if abs(shortSide - target) < 0.001 { return ci }
+    let scale = target / shortSide
+    return ci.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+}
+
 func padToSquareTransparent(_ ci: CIImage, size: CGFloat) -> CIImage {
     let extent = ci.extent.standardized
     let w = extent.width
@@ -349,10 +413,35 @@ func centerImageOnFace(_ ci: CIImage, faceRect: CGRect) -> CIImage {
     return translated.composited(over: background).cropped(to: background.extent)
 }
 
+func centerCropSquare(_ ci: CIImage, size: CGFloat) -> CIImage {
+    let extent = ci.extent.standardized
+    let x = extent.midX - size / 2.0
+    let y = extent.midY - size / 2.0
+    let cropRect = CGRect(x: x, y: y, width: size, height: size)
+    let intersection = cropRect.intersection(extent)
+    let cropped = ci.cropped(to: intersection)
+    return cropped.transformed(by: CGAffineTransform(translationX: -intersection.minX, y: -intersection.minY))
+}
+
 // MARK: - Pipeline
 
 struct Pipeline {
     let args: Args
+    let superResEngine: SuperResolutionEngine?
+
+    init(args: Args) throws {
+        self.args = args
+        if let url = args.superResModel {
+            do {
+                self.superResEngine = try SuperResolutionEngine(modelURL: url)
+                print("Super-resolution model loaded from \(url.path)")
+            } catch {
+                throw NSError(domain: "CLI", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to load super-resolution model: \(error)"])
+            }
+        } else {
+            self.superResEngine = nil
+        }
+    }
 
     func run() throws {
         let fm = FileManager.default
@@ -405,8 +494,23 @@ struct Pipeline {
             working = centerImageOnFace(working, faceRect: fr)
         }
 
-        working = scaleLongSide(working, to: args.size)
-        working = padToSquareTransparent(working, size: args.size)
+        if let engine = superResEngine {
+            working = engine.upscaleUntilShortSideMeetsTarget(working, target: args.size)
+        }
+
+        if min(working.extent.width, working.extent.height) + 0.5 >= args.size {
+            working = scaleShortSide(working, to: args.size)
+            let ext = working.extent.standardized
+            if ext.width >= args.size - 0.5 && ext.height >= args.size - 0.5 {
+                working = centerCropSquare(working, size: args.size)
+            } else {
+                working = padToSquareTransparent(scaleLongSide(working, to: args.size), size: args.size)
+            }
+        } else {
+            // Fallback path when super-resolution model is unavailable or insufficient.
+            working = scaleLongSide(working, to: args.size)
+            working = padToSquareTransparent(working, size: args.size)
+        }
 
         let final: CIImage
         if args.removeBackground, #available(macOS 12.0, *), let mask = try? personMask(for: working) {
