@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCore.build/master.swiftdeps"
+  },
+  "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Sources/LoRAPrepCore/LoRAPrepPipeline.swift": {
+    "dependencies": "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCore.build/LoRAPrepPipeline.d",
+    "object": "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCore.build/LoRAPrepPipeline.swift.o",
+    "swiftmodule": "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCore.build/LoRAPrepPipeline~partial.swiftmodule",
+    "swift-dependencies": "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCore.build/LoRAPrepPipeline.swiftdeps",
+    "diagnostics": "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCore.build/LoRAPrepPipeline.dia"
+  }
+}

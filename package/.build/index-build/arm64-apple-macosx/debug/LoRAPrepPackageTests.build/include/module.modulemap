@@ -1,0 +1,3 @@
+module LoRAPrepPackageTests {
+    header "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepPackageTests.build/include/LoRAPrepPackageTests-Swift.h"
+}

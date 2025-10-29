@@ -1,0 +1,110 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "LoRAPrep-arm64-apple-macosx26.0-debug.module": ["<LoRAPrep-arm64-apple-macosx26.0-debug.module>"]
+  "LoRAPrepCore-arm64-apple-macosx26.0-debug.module": ["<LoRAPrepCore-arm64-apple-macosx26.0-debug.module>"]
+  "LoRAPrepCoreTests-arm64-apple-macosx26.0-debug.module": ["<LoRAPrepCoreTests-arm64-apple-macosx26.0-debug.module>"]
+  "LoRAPrepPackageTests-arm64-apple-macosx26.0-debug.module": ["<LoRAPrepPackageTests-arm64-apple-macosx26.0-debug.module>"]
+  "PackageStructure": ["<PackageStructure>"]
+  "main": ["<LoRAPrep-arm64-apple-macosx26.0-debug.module>","<LoRAPrepCore-arm64-apple-macosx26.0-debug.module>"]
+  "test": ["<LoRAPrep-arm64-apple-macosx26.0-debug.module>","<LoRAPrepCore-arm64-apple-macosx26.0-debug.module>","<LoRAPrepCoreTests-arm64-apple-macosx26.0-debug.module>"]
+default: "main"
+nodes:
+  "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Sources/LORA-Prep/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Sources/LoRAPrepCore/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Tests/LoRAPrepCoreTests/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrep.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Sources/LORA-Prep/LORA_Prep.swift"]
+    outputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrep.build/sources"]
+    description: "Write auxiliary file /Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrep.build/sources"
+
+  "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCore.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Sources/LoRAPrepCore/LoRAPrepPipeline.swift"]
+    outputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCore.build/sources"]
+    description: "Write auxiliary file /Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCore.build/sources"
+
+  "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCoreTests.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Tests/LoRAPrepCoreTests/PipelineConfigTests.swift"]
+    outputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCoreTests.build/sources"]
+    description: "Write auxiliary file /Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCoreTests.build/sources"
+
+  "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepPackageTests.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepPackageTests.derived/runner.swift"]
+    outputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepPackageTests.build/sources"]
+    description: "Write auxiliary file /Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepPackageTests.build/sources"
+
+  "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"]
+    outputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+
+  "<LoRAPrep-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules/LoRAPrep.swiftmodule"]
+    outputs: ["<LoRAPrep-arm64-apple-macosx26.0-debug.module>"]
+
+  "<LoRAPrepCore-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules/LoRAPrepCore.swiftmodule"]
+    outputs: ["<LoRAPrepCore-arm64-apple-macosx26.0-debug.module>"]
+
+  "<LoRAPrepCoreTests-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules/LoRAPrepCoreTests.swiftmodule"]
+    outputs: ["<LoRAPrepCoreTests-arm64-apple-macosx26.0-debug.module>"]
+
+  "<LoRAPrepPackageTests-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules/LoRAPrepPackageTests.swiftmodule"]
+    outputs: ["<LoRAPrepPackageTests-arm64-apple-macosx26.0-debug.module>"]
+
+  "C.LoRAPrep-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Sources/LORA-Prep/LORA_Prep.swift","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules/LoRAPrepCore.swiftmodule","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrep.build/sources"]
+    outputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules/LoRAPrep.swiftmodule"]
+    description: "Compiling Swift Module 'LoRAPrep' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","LoRAPrep","-emit-dependencies","-emit-module","-emit-module-path","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules/LoRAPrep.swiftmodule","-output-file-map","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrep.build/output-file-map.json","-incremental","@/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrep.build/sources","-I","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx13.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j10","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-swift-version","5","-O","-Xfrontend","-experimental-lazy-typecheck","-Xfrontend","-experimental-skip-all-function-bodies","-Xfrontend","-experimental-allow-module-with-compiler-errors","-Xfrontend","-empty-abi-descriptor","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","package"]
+
+  "C.LoRAPrepCore-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Sources/LoRAPrepCore/LoRAPrepPipeline.swift","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCore.build/sources"]
+    outputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules/LoRAPrepCore.swiftmodule"]
+    description: "Compiling Swift Module 'LoRAPrepCore' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","LoRAPrepCore","-emit-dependencies","-emit-module","-emit-module-path","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules/LoRAPrepCore.swiftmodule","-output-file-map","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCore.build/output-file-map.json","-parse-as-library","-incremental","@/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCore.build/sources","-I","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx13.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j10","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCore.build/include/LoRAPrepCore-Swift.h","-swift-version","5","-Xfrontend","-experimental-lazy-typecheck","-Xfrontend","-experimental-skip-all-function-bodies","-Xfrontend","-experimental-allow-module-with-compiler-errors","-Xfrontend","-empty-abi-descriptor","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","package"]
+
+  "C.LoRAPrepCoreTests-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Tests/LoRAPrepCoreTests/PipelineConfigTests.swift","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules/LoRAPrepCore.swiftmodule","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCoreTests.build/sources"]
+    outputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules/LoRAPrepCoreTests.swiftmodule"]
+    description: "Compiling Swift Module 'LoRAPrepCoreTests' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","LoRAPrepCoreTests","-emit-dependencies","-emit-module","-emit-module-path","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules/LoRAPrepCoreTests.swiftmodule","-output-file-map","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCoreTests.build/output-file-map.json","-parse-as-library","-incremental","@/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCoreTests.build/sources","-I","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-Xfrontend","-enable-cross-import-overlays","-j10","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-swift-version","5","-Xfrontend","-experimental-lazy-typecheck","-Xfrontend","-experimental-skip-all-function-bodies","-Xfrontend","-experimental-allow-module-with-compiler-errors","-Xfrontend","-empty-abi-descriptor","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","package"]
+
+  "C.LoRAPrepPackageTests-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepPackageTests.derived/runner.swift","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules/LoRAPrepCoreTests.swiftmodule","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepPackageTests.build/sources"]
+    outputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules/LoRAPrepPackageTests.swiftmodule"]
+    description: "Compiling Swift Module 'LoRAPrepPackageTests' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","LoRAPrepPackageTests","-emit-dependencies","-emit-module","-emit-module-path","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules/LoRAPrepPackageTests.swiftmodule","-output-file-map","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepPackageTests.build/output-file-map.json","-parse-as-library","-incremental","@/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepPackageTests.build/sources","-I","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx13.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-Xfrontend","-enable-cross-import-overlays","-j10","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepPackageTests.build/include/LoRAPrepPackageTests-Swift.h","-Xfrontend","-experimental-lazy-typecheck","-Xfrontend","-experimental-skip-all-function-bodies","-Xfrontend","-experimental-allow-module-with-compiler-errors","-Xfrontend","-empty-abi-descriptor","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","package"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Sources/LORA-Prep/","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Sources/LoRAPrepCore/","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Tests/LoRAPrepCoreTests/","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Package.swift","/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+

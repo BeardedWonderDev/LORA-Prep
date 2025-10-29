@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCoreTests.build/master.swiftdeps"
+  },
+  "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/Tests/LoRAPrepCoreTests/PipelineConfigTests.swift": {
+    "dependencies": "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCoreTests.build/PipelineConfigTests.d",
+    "object": "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCoreTests.build/PipelineConfigTests.swift.o",
+    "swiftmodule": "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCoreTests.build/PipelineConfigTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCoreTests.build/PipelineConfigTests.swiftdeps",
+    "diagnostics": "/Users/brianpistone/Development/BeardedWonder/LORA-Prep/package/.build/index-build/arm64-apple-macosx/debug/LoRAPrepCoreTests.build/PipelineConfigTests.dia"
+  }
+}
