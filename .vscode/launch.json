@@ -17,6 +17,24 @@
             "name": "Release LoRAPrep",
             "program": "${workspaceFolder:LORA-Prep}/.build/release/LoRAPrep",
             "preLaunchTask": "swift: Build Release LoRAPrep"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:LORA-Prep}/package",
+            "name": "Debug LoRAPrep (package)",
+            "program": "${workspaceFolder:LORA-Prep}/package/.build/debug/LoRAPrep",
+            "preLaunchTask": "swift: Build Debug LoRAPrep (package)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:LORA-Prep}/package",
+            "name": "Release LoRAPrep (package)",
+            "program": "${workspaceFolder:LORA-Prep}/package/.build/release/LoRAPrep",
+            "preLaunchTask": "swift: Build Release LoRAPrep (package)"
         }
     ]
 }
