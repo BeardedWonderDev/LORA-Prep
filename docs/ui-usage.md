@@ -10,8 +10,9 @@ The `LoraPrep` SwiftUI app wraps the shared `LoRAPrepCore` pipeline with a deskt
 4. Adjust options:
    - Output size (512–2048 px).
    - Background removal toggle (Vision segmentation, macOS 12+).
-   - Padding mode (transparent vs. edge color), face-detection bypass, and optional Core ML super-resolution model (`.mlmodel`/`.mlmodelc`).
-5. Press **Process Images** to start the pipeline. Progress appears inline; the button disables until processing finishes.
+   - Padding mode (transparent vs. edge color) and optional face-detection bypass.
+5. On first launch the app will prompt you to choose a `.mlmodelc` (or `.mlmodel`) bundle; the selection is remembered. Use **LoRAPrep ▸ Settings…** (⌘,) to change or clear it later.
+6. Press **Process Images** to start the pipeline. Progress appears inline; the button disables until processing finishes.
 
 ## Results Browser
 
@@ -25,8 +26,8 @@ The `LoraPrep` SwiftUI app wraps the shared `LoRAPrepCore` pipeline with a deskt
 - ✅ CLI compatibility: `swift run LoRAPrep -- --help` and padding behavior confirmed via unit tests (`swift test`).
 - ✅ UI launch/build: Xcode project links `LoRAPrepCore` (add via **File ▸ Add Packages…** pointing to the repo root).
 - ✅ Folder selection & validation: empty selections prompt inline error; LoRA name normalization surfaces in UI.
-- ✅ Processing flow: run with background removal on/off, transparency vs. edge-color padding, skip-face-detection toggled.
-- ✅ Optional super-resolution: selecting `.mlmodelc` loads successfully; clearing the selection resets state.
+- ✅ Processing flow: run with background removal on/off, transparency vs. edge-color padding, skip-face-detection toggled. Verify the Advanced Options disclosure reflects overrides and the **Reset to defaults** button re-applies Settings values.
+- ✅ Optional super-resolution: first-launch prompt appears, future launches reuse the saved path, and Settings allows changing/clearing the model. Cancelled or missing bundles should re-trigger the prompt on next launch.
 - ✅ Results review: side-by-side thumbnails display, Finder reveal works for both originals and processed outputs, failure callouts list any errors.
 
 Document the specific sample folders and models used during testing alongside screenshots when preparing PRs, per `AGENTS.md` guidance.

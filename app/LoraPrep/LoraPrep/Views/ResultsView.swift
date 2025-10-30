@@ -138,11 +138,7 @@ private struct ThumbnailImage: View {
 }
 
 #Preview {
-    let state = AppState()
-    state.results = [
-        ResultPair(original: URL(fileURLWithPath: "/tmp/input1.png"), processed: URL(fileURLWithPath: "/tmp/output1.png"))
-    ]
-    return ResultsView(model: state)
+    ResultsView(model: AppState(settings: SettingsStore()))
         .frame(width: 720)
         .padding()
 }

@@ -2,6 +2,8 @@ import SwiftUI
 
 struct InputControlsView: View {
     @ObservedObject var model: AppState
+    @EnvironmentObject private var settings: SettingsStore
+    @State private var advancedExpanded = false
 
     private let sizeRange = 512.0...2048.0
 
@@ -57,47 +59,65 @@ struct InputControlsView: View {
                 }
             }
 
-            HStack(spacing: 16) {
-                Toggle("Remove background", isOn: $model.removeBackground)
-                    .disabled(model.isProcessing)
-                Toggle("Pad with transparency", isOn: $model.padWithTransparency)
-                    .disabled(model.isProcessing)
-                Toggle("Skip face detection", isOn: $model.skipFaceDetection)
-                    .disabled(model.isProcessing)
+            DisclosureGroup(isExpanded: $advancedExpanded) {
+                VStack(alignment: .leading, spacing: 12) {
+                    advancedToggle(title: "Remove background",
+                                   binding: $model.removeBackground,
+                                   defaultValue: settings.defaultRemoveBackground,
+                                   help: "Use Vision person segmentation to cut out the background before saving.")
+                    advancedToggle(title: "Pad with transparency",
+                                   binding: $model.padWithTransparency,
+                                   defaultValue: settings.defaultPadWithTransparency,
+                                   help: "Fill padded regions with transparent pixels; disable to use edge color padding.")
+                    advancedToggle(title: "Skip face detection",
+                                   binding: $model.skipFaceDetection,
+                                   defaultValue: settings.defaultSkipFaceDetection,
+                                   help: "Bypass Vision face detection and use simple center crop/pad instead.")
+                    Divider()
+                    HStack {
+                        Button("Reset to defaults") {
+                            model.resetAdvancedOptionsToDefaults()
+                        }
+                        .disabled(model.isProcessing)
+                        Text("Defaults can be changed under Settings (⌘,).")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                }
+                .padding(.top, 6)
+            } label: {
+                Text("Advanced Options")
             }
+            .disabled(model.isProcessing)
+            .tint(.accentColor)
 
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Super-resolution Model")
-                        .font(.headline)
-                    if let modelURL = model.superResModelURL {
-                        Text(modelURL.lastPathComponent)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text("Optional .mlmodel or .mlmodelc")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                Spacer()
-                Button("Choose Model…") {
-                    model.chooseSuperResModel()
-                }
-                .disabled(model.isProcessing)
-                if model.superResModelURL != nil {
-                    Button("Clear") {
-                        model.clearSuperResModel()
-                    }
-                    .disabled(model.isProcessing)
-                }
-            }
+            Text("Configure super-resolution models from Settings (⌘,).")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    private func advancedToggle(title: String,
+                                binding: Binding<Bool>,
+                                defaultValue: Bool,
+                                help: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Toggle(title, isOn: binding)
+                .help(help)
+            let matchesDefault = binding.wrappedValue == defaultValue
+            let status = matchesDefault ? "Matches default" : "Default: \(defaultValue ? "On" : "Off")"
+            Text(status)
+                .font(.caption2)
+                .foregroundColor(matchesDefault ? .secondary : .orange)
         }
     }
 }
 
 #Preview {
-    InputControlsView(model: AppState())
+    let store = SettingsStore()
+    InputControlsView(model: AppState(settings: store))
+        .environmentObject(store)
         .padding()
         .frame(width: 800)
 }

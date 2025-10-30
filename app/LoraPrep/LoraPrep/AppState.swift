@@ -6,13 +6,17 @@ import UniformTypeIdentifiers
 
 @MainActor
 final class AppState: ObservableObject {
+    private let settings: SettingsStore
+    private var cancellables: Set<AnyCancellable> = []
+    private var hasPromptedForModelThisSession = false
+
     // MARK: - User-configurable inputs
     @Published var inputFolder: URL?
     @Published var loraName: String = ""
     @Published var size: Double = 1024
-    @Published var removeBackground: Bool = false
-    @Published var padWithTransparency: Bool = true
-    @Published var skipFaceDetection: Bool = false
+    @Published var removeBackground: Bool
+    @Published var padWithTransparency: Bool
+    @Published var skipFaceDetection: Bool
     @Published var superResModelURL: URL?
 
     // MARK: - Processing state
@@ -29,9 +33,50 @@ final class AppState: ObservableObject {
         normLoraName(loraName)
     }
 
+    var defaultRemoveBackground: Bool { settings.defaultRemoveBackground }
+    var defaultPadWithTransparency: Bool { settings.defaultPadWithTransparency }
+    var defaultSkipFaceDetection: Bool { settings.defaultSkipFaceDetection }
+
     var isReadyToProcess: Bool {
         guard let _ = inputFolder else { return false }
         return !normalizedLoRAName.isEmpty && !isProcessing
+    }
+
+    init(settings: SettingsStore) {
+        self.settings = settings
+        removeBackground = settings.defaultRemoveBackground
+        padWithTransparency = settings.defaultPadWithTransparency
+        skipFaceDetection = settings.defaultSkipFaceDetection
+
+        if let path = settings.superResModelPath {
+            let url = URL(fileURLWithPath: path)
+            if FileManager.default.fileExists(atPath: url.path) {
+                superResModelURL = url
+            } else {
+                superResModelURL = nil
+                settings.superResModelPath = nil
+            }
+        } else {
+            superResModelURL = nil
+        }
+
+        settings.$defaultRemoveBackground
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] value in self?.removeBackground = value }
+            .store(in: &cancellables)
+
+        settings.$defaultPadWithTransparency
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] value in self?.padWithTransparency = value }
+            .store(in: &cancellables)
+
+        settings.$defaultSkipFaceDetection
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] value in self?.skipFaceDetection = value }
+            .store(in: &cancellables)
     }
 
     // MARK: - Actions
@@ -43,17 +88,56 @@ final class AppState: ObservableObject {
         }
     }
 
-    func chooseSuperResModel() {
-        let utTypes: [UTType] = [.init(filenameExtension: "mlmodel")!, .init(filenameExtension: "mlmodelc")!]
-        guard let panel = configuredOpenPanel(canChooseFiles: true, allowedTypes: utTypes) else { return }
-        panel.message = "Choose a Core ML super-resolution model (optional)."
-        if panel.runModal() == .OK {
-            superResModelURL = panel.urls.first
+    func ensureSuperResModelAvailability() {
+        if let url = superResModelURL, !FileManager.default.fileExists(atPath: url.path) {
+            superResModelURL = nil
+            settings.superResModelPath = nil
+            errorAlert = IdentifiableError(message: "The previously selected super-resolution model could not be found. Please choose a new one.")
+            hasPromptedForModelThisSession = false
+        }
+
+        if superResModelURL == nil && !hasPromptedForModelThisSession {
+            hasPromptedForModelThisSession = true
+            chooseSuperResModel(reason: "Select a Core ML super-resolution model to enable super-resolution support.", isLaunchPrompt: true)
+        }
+    }
+
+    func chooseSuperResModel(reason: String? = nil, isLaunchPrompt: Bool = false) {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [
+            UTType(filenameExtension: "mlmodel")!,
+            UTType(filenameExtension: "mlmodelc")!,
+            .directory
+        ]
+        panel.prompt = "Choose"
+        panel.message = reason ?? "Choose a Core ML super-resolution model (optional)."
+        let response = panel.runModal()
+        if response == .OK, let url = panel.urls.first {
+            if url.pathExtension == "mlmodelc" || url.pathExtension == "mlmodel" {
+                superResModelURL = url
+                settings.superResModelPath = url.path
+            } else {
+                errorAlert = IdentifiableError(message: "Please select a .mlmodel or .mlmodelc bundle.")
+                if isLaunchPrompt { hasPromptedForModelThisSession = false }
+            }
+        } else if isLaunchPrompt {
+            hasPromptedForModelThisSession = false
         }
     }
 
     func clearSuperResModel() {
         superResModelURL = nil
+        settings.superResModelPath = nil
+        hasPromptedForModelThisSession = false
+    }
+
+    func resetAdvancedOptionsToDefaults() {
+        removeBackground = settings.defaultRemoveBackground
+        padWithTransparency = settings.defaultPadWithTransparency
+        skipFaceDetection = settings.defaultSkipFaceDetection
     }
 
     func startProcessing() {

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var model = AppState()
+    @EnvironmentObject private var model: AppState
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -40,6 +40,9 @@ struct ContentView: View {
         }
         .padding(24)
         .frame(minWidth: 960, minHeight: 640)
+        .onAppear {
+            model.ensureSuperResModelAvailability()
+        }
         .alert(item: $model.errorAlert) { item in
             Alert(title: Text("Error"),
                   message: Text(item.message),
@@ -49,6 +52,10 @@ struct ContentView: View {
 }
 
 #Preview {
+    let store = SettingsStore()
+    let state = AppState(settings: store)
     ContentView()
+        .environmentObject(state)
+        .environmentObject(store)
         .frame(width: 960, height: 640)
 }
