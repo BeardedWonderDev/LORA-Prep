@@ -1,4 +1,5 @@
 import SwiftUI
+import LoRAPrepCore
 
 struct InputControlsView: View {
     @ObservedObject var model: AppState
@@ -6,6 +7,8 @@ struct InputControlsView: View {
     @State private var advancedExpanded = false
 
     private let sizeRange = 512.0...2048.0
+    private let featherRange = 0.0...10.0
+    private let erosionRange = 0.0...5.0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -81,6 +84,9 @@ struct InputControlsView: View {
                                    binding: $model.maximizeSubjectFill,
                                    defaultValue: settings.defaultMaximizeSubjectFill,
                                    help: "After removing the background, crop and scale the remaining subject so it fills the frame without trimming.")
+                    if model.removeBackground {
+                        segmentationControls
+                    }
                     Divider()
                     HStack {
                         Button("Reset to defaults") {
@@ -103,6 +109,81 @@ struct InputControlsView: View {
             Text("Configure super-resolution models from Settings (⌘,).")
                 .font(.caption)
                 .foregroundColor(.secondary)
+        }
+    }
+
+    private var segmentationControls: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Picker("Segmentation mode", selection: $model.segmentationMode) {
+                ForEach(availableSegmentationModes, id: \.self) { mode in
+                    Text(label(for: mode)).tag(mode)
+                }
+            }
+            .help("Choose which segmentation engine to use when removing backgrounds.")
+            if !unavailableSegmentationModes.isEmpty {
+                Text(unavailableDescription)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Mask feather")
+                    Spacer()
+                    Text("\(model.maskFeather, specifier: "%.1f") px")
+                        .monospacedDigit()
+                        .foregroundColor(model.maskFeather == settings.defaultMaskFeather ? .secondary : .orange)
+                }
+                Slider(value: $model.maskFeather, in: featherRange, step: 0.1)
+                    .disabled(!model.removeBackground)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Mask erosion")
+                    Spacer()
+                    Text("\(model.maskErosion, specifier: "%.1f") px")
+                        .monospacedDigit()
+                        .foregroundColor(model.maskErosion == settings.defaultMaskErosion ? .secondary : .orange)
+                }
+                Slider(value: $model.maskErosion, in: erosionRange, step: 0.1)
+                    .disabled(!model.removeBackground)
+            }
+        }
+        .onAppear { ensureValidSegmentationMode() }
+        .onChange(of: model.segmentationMode) { _ in ensureValidSegmentationMode() }
+    }
+
+    private var availableSegmentationModes: [LoRAPrepConfiguration.SegmentationMode] {
+        LoRAPrepConfiguration.SegmentationMode.allCases.filter { segmentationModeIsAvailable($0) }
+    }
+
+    private var unavailableSegmentationModes: [LoRAPrepConfiguration.SegmentationMode] {
+        LoRAPrepConfiguration.SegmentationMode.allCases.filter { !segmentationModeIsAvailable($0) }
+    }
+
+    private var unavailableDescription: String {
+        let names = unavailableSegmentationModes.map(label(for:)).joined(separator: ", ")
+        return "Unavailable: \(names). Add the corresponding .mlmodelc to enable."
+    }
+
+    private func label(for mode: LoRAPrepConfiguration.SegmentationMode) -> String {
+        switch mode {
+        case .automatic:
+            return "Automatic (Vision balanced)"
+        case .accurateVision:
+            return "Vision accurate"
+        case .deepLabV3:
+            return "DeepLabV3"
+        case .robustVideoMatting:
+            return "Robust Video Matting"
+        }
+    }
+
+    private func ensureValidSegmentationMode() {
+        guard !availableSegmentationModes.isEmpty else { return }
+        if !segmentationModeIsAvailable(model.segmentationMode) {
+            model.segmentationMode = availableSegmentationModes.first ?? .automatic
         }
     }
 

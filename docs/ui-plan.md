@@ -26,6 +26,7 @@ This document breaks down the work required to turn the Swift CLI pipeline into 
    - `skipFaceDetection` (default `false` to match CLI).
    - `preferPaddingOverCrop` (default `false`, lets users retain the full frame with padded borders instead of center-cropping).
    - `maximizeSubjectFill` (default `false`, crops/scales the masked subject after background removal so it fills the square without trimming it).
+   - `segmentationMode`, `maskFeather`, `maskErosion` to control mask engine selection and post-processing.
 2. Update shared pipeline functions to respect these toggles (reusing existing helper code from `loraPrep.sh` where necessary).
 3. Create `Tests/LoRAPrepCoreTests/PipelineConfigTests.swift` covering padding mode and face-detection bypass scenarios with deterministic CIImage fixtures.
 4. Run `swift test`.
@@ -60,7 +61,7 @@ This document breaks down the work required to turn the Swift CLI pipeline into 
    - Slider + stepper for size (512–2048) with live label.
    - Toggle for `removeBackground` (gated on macOS 12 availability).
    - File picker for super-resolution model filtering `.mlmodel`/`.mlmodelc`.
-   - Toggles for `padWithTransparency`, `skipFaceDetection`, `preferPaddingOverCrop`, and `maximizeSubjectFill`.
+   - Toggles for `padWithTransparency`, `skipFaceDetection`, `preferPaddingOverCrop`, `segmentationMode` picker, mask feather/erosion sliders, and `maximizeSubjectFill`.
 2. Wire controls to `AppState` bindings.
 3. Manual test: run app, confirm controls update state as expected.
 
@@ -98,4 +99,5 @@ This document breaks down the work required to turn the Swift CLI pipeline into 
    - Toggle background removal and padding modes.
    - Use skip-face-detection mode for edge cases.
    - Enable maximize-subject alongside background removal to confirm the subject fills the frame without clipping.
+   - Exercise each segmentation mode and tweak mask feather/erosion to ensure UI and pipeline integrate correctly.
 3. Update documentation (`AGENTS.md` or README replacement) summarizing new UI workflow and test steps.

@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import LoRAPrepCore
 
 final class SettingsStore: ObservableObject {
     private enum Keys {
@@ -10,6 +11,9 @@ final class SettingsStore: ObservableObject {
         static let superResModelBookmark = "settings.superResModelBookmark"
         static let preferPaddingOverCrop = "settings.defaultPreferPaddingOverCrop"
         static let maximizeSubjectFill = "settings.defaultMaximizeSubjectFill"
+        static let segmentationMode = "settings.defaultSegmentationMode"
+        static let maskFeather = "settings.defaultMaskFeather"
+        static let maskErosion = "settings.defaultMaskErosion"
     }
 
     private let defaults: UserDefaults
@@ -32,6 +36,18 @@ final class SettingsStore: ObservableObject {
 
     @Published var defaultMaximizeSubjectFill: Bool {
         didSet { defaults.set(defaultMaximizeSubjectFill, forKey: Keys.maximizeSubjectFill) }
+    }
+
+    @Published var defaultSegmentationMode: LoRAPrepConfiguration.SegmentationMode {
+        didSet { defaults.set(defaultSegmentationMode.rawValue, forKey: Keys.segmentationMode) }
+    }
+
+    @Published var defaultMaskFeather: Double {
+        didSet { defaults.set(defaultMaskFeather, forKey: Keys.maskFeather) }
+    }
+
+    @Published var defaultMaskErosion: Double {
+        didSet { defaults.set(defaultMaskErosion, forKey: Keys.maskErosion) }
     }
 
     @Published var superResModelPath: String? {
@@ -66,6 +82,14 @@ final class SettingsStore: ObservableObject {
         defaultSkipFaceDetection = defaults.bool(forKey: Keys.skipFaceDetection)
         defaultPreferPaddingOverCrop = defaults.bool(forKey: Keys.preferPaddingOverCrop)
         defaultMaximizeSubjectFill = defaults.bool(forKey: Keys.maximizeSubjectFill)
+        if let modeRaw = defaults.string(forKey: Keys.segmentationMode),
+           let mode = LoRAPrepConfiguration.SegmentationMode(rawValue: modeRaw) {
+            defaultSegmentationMode = mode
+        } else {
+            defaultSegmentationMode = .automatic
+        }
+        defaultMaskFeather = defaults.object(forKey: Keys.maskFeather) as? Double ?? 0
+        defaultMaskErosion = defaults.object(forKey: Keys.maskErosion) as? Double ?? 0
         superResModelPath = defaults.string(forKey: Keys.superResModelPath)
         superResModelBookmark = defaults.data(forKey: Keys.superResModelBookmark)
     }

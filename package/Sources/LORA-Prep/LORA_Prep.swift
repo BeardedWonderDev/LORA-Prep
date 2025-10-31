@@ -12,6 +12,9 @@ struct Args {
     var skipFaceDetection: Bool = false
     var preferPaddingOverCrop: Bool = false
     var maximizeSubjectFill: Bool = false
+    var segmentationMode: LoRAPrepConfiguration.SegmentationMode = .automatic
+    var maskFeather: CGFloat = 0
+    var maskErosion: CGFloat = 0
 
     static func parse() -> Args? {
         var input: URL?
@@ -23,6 +26,9 @@ struct Args {
         var skipFaceDetection = false
         var preferPaddingOverCrop = false
         var maximizeSubjectFill = false
+        var segmentationMode = LoRAPrepConfiguration.SegmentationMode.automatic
+        var maskFeather: CGFloat = 0
+        var maskErosion: CGFloat = 0
 
         var it = CommandLine.arguments.dropFirst().makeIterator()
         while let a = it.next() {
@@ -49,6 +55,22 @@ struct Args {
                 preferPaddingOverCrop = true
             case "--maximize-subject":
                 maximizeSubjectFill = true
+            case "--segmentation-mode":
+                if let value = it.next(),
+                   let mode = LoRAPrepConfiguration.SegmentationMode(rawValue: value) {
+                    segmentationMode = mode
+                } else {
+                    fputs("Invalid segmentation mode. Options: automatic, accurateVision, deepLabV3, robustVideoMatting.\n", stderr)
+                    return nil
+                }
+            case "--mask-feather":
+                if let value = it.next(), let amount = Double(value) {
+                    maskFeather = CGFloat(max(0, amount))
+                }
+            case "--mask-erosion":
+                if let value = it.next(), let amount = Double(value) {
+                    maskErosion = CGFloat(max(0, amount))
+                }
             case "--help", "-h":
                 printUsage()
                 return nil
@@ -68,6 +90,15 @@ struct Args {
         args.skipFaceDetection = skipFaceDetection
         args.preferPaddingOverCrop = preferPaddingOverCrop
         args.maximizeSubjectFill = maximizeSubjectFill
+        args.segmentationMode = segmentationMode
+        args.maskFeather = maskFeather
+        args.maskErosion = maskErosion
+
+        if !segmentationModeIsAvailable(args.segmentationMode) {
+            fputs("Segmentation mode \(args.segmentationMode.rawValue) requires a bundled Core ML model that could not be found.\n", stderr)
+            fputs("Bundle the corresponding .mlmodelc or choose another mode.\n", stderr)
+            return nil
+        }
         return args
     }
 
@@ -86,6 +117,9 @@ struct Args {
               --skip-face-detection          Bypass Vision face detection and center crop/pad
               --pad-instead-of-crop          Always scale & pad instead of center cropping when images are larger than target
               --maximize-subject             After background removal, crop/scale the subject to fill the frame without trimming it
+              --segmentation-mode <mode>     Segmentation engine (automatic, accurateVision, deepLabV3, robustVideoMatting)
+              --mask-feather <pixels>        Blur radius applied to mask edges
+              --mask-erosion <pixels>        Morphology radius to tighten mask before feathering
               --help, -h                     Show this help message
             """
         )
@@ -105,7 +139,10 @@ func runCLI() {
         padWithTransparency: args.padWithTransparency,
         skipFaceDetection: args.skipFaceDetection,
         preferPaddingOverCrop: args.preferPaddingOverCrop,
-        maximizeSubjectFill: args.maximizeSubjectFill
+        maximizeSubjectFill: args.maximizeSubjectFill,
+        segmentationMode: args.segmentationMode,
+        maskFeather: args.maskFeather,
+        maskErosion: args.maskErosion
     )
 
     do {

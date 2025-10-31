@@ -1,5 +1,5 @@
 import XCTest
-import LoRAPrepCore
+@testable import LoRAPrepCore
 import CoreImage
 import ImageIO
 import UniformTypeIdentifiers
@@ -112,6 +112,51 @@ final class PipelineConfigTests: XCTestCase {
             let processedURL = try XCTUnwrap(result.images.first?.processedURL)
             XCTAssertEqual(try extractAlphaAtCorner(of: processedURL), 0)
         }
+    }
+
+    func testSegmentationFallbackToVisionWhenModelUnavailable() throws {
+        let tempRoot = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let inputDir = tempRoot.appendingPathComponent("input", isDirectory: true)
+        try fm.createDirectory(at: inputDir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: tempRoot) }
+
+        let sourceImageURL = inputDir.appendingPathComponent("solid.png")
+        try writeSolidImage(color: CIColor(red: 0.8, green: 0.3, blue: 0.2, alpha: 1),
+                            size: CGSize(width: 256, height: 320),
+                            to: sourceImageURL)
+
+        let config = LoRAPrepConfiguration(
+            inputFolder: inputDir,
+            loraName: "fallback",
+            size: 256,
+            removeBackground: true,
+            superResModelURL: nil,
+            padWithTransparency: true,
+            skipFaceDetection: true,
+            preferPaddingOverCrop: true,
+            maximizeSubjectFill: false,
+            segmentationMode: .deepLabV3
+        )
+
+        let pipeline = try LoRAPrepPipeline(configuration: config)
+        let result = try pipeline.run()
+        XCTAssertEqual(result.images.count, 1)
+    }
+
+    func testAuxiliaryAssetsEmptyForPNG() throws {
+        let tempRoot = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let inputDir = tempRoot.appendingPathComponent("input", isDirectory: true)
+        try fm.createDirectory(at: inputDir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: tempRoot) }
+
+        let sourceImageURL = inputDir.appendingPathComponent("plain.png")
+        try writeSolidImage(color: CIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1),
+                            size: CGSize(width: 64, height: 64),
+                            to: sourceImageURL)
+
+        let assets = loadAuxiliaryAssets(for: sourceImageURL)
+        XCTAssertNil(assets.portraitMatte)
+        XCTAssertNil(assets.depthData)
     }
 
     func testMaximizeSubjectFillExpandsOpaqueRegion() throws {

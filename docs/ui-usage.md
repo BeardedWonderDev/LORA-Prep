@@ -10,7 +10,7 @@ The `LoraPrep` SwiftUI app wraps the shared `LoRAPrepCore` pipeline with a deskt
 4. Adjust options:
    - Output size (512–2048 px).
    - Background removal toggle (Vision segmentation, macOS 12+).
-   - Padding mode (transparent vs. edge color), optional face-detection bypass, **Prefer padding over center crop** to retain full frames, and **Maximize subject fill** to enlarge the masked subject after background removal.
+   - Padding mode (transparent vs. edge color), optional face-detection bypass, **Prefer padding over center crop**, **Segmentation mode** (Automatic / Vision Accurate / DeepLabV3 / Robust Video Matting), mask edge controls (**Feather**, **Erosion**), and **Maximize subject fill** to enlarge the masked subject after background removal.
 5. On first launch the app will prompt you to choose a `.mlmodelc` (or `.mlmodel`) bundle; the selection is remembered. Use **LoRAPrep ▸ Settings…** (⌘,) to change or clear it later.
 6. Press **Process Images** to start the pipeline. Progress appears inline; the button disables until processing finishes.
 
@@ -31,5 +31,6 @@ The `LoraPrep` SwiftUI app wraps the shared `LoRAPrepCore` pipeline with a deskt
 - ✅ Subject maximize: enable **Maximize subject fill** alongside background removal and confirm the subject expands while remaining fully visible.
 - ✅ Optional super-resolution: first-launch prompt appears, future launches reuse the saved path, and Settings allows changing/clearing the model. Cancelled or missing bundles should re-trigger the prompt on next launch.
 - ✅ Results review: side-by-side thumbnails display, Finder reveal works for both originals and processed outputs, failure callouts list any errors.
+- ✅ HEIC auxiliary data: verify that using “Export Unmodified Original” from Photos preserves depth/portrait mattes (advanced mask fusion), while JPEG/PNG exports behave like Vision-only mode.
 
 Document the specific sample folders and models used during testing alongside screenshots when preparing PRs, per `AGENTS.md` guidance.

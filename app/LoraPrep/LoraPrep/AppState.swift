@@ -20,6 +20,9 @@ final class AppState: ObservableObject {
     @Published var padWithTransparency: Bool
     @Published var skipFaceDetection: Bool
     @Published var preferPaddingOverCrop: Bool
+    @Published var segmentationMode: LoRAPrepConfiguration.SegmentationMode
+    @Published var maskFeather: Double
+    @Published var maskErosion: Double
     @Published var maximizeSubjectFill: Bool
     @Published var superResModelURL: URL?
 
@@ -41,6 +44,9 @@ final class AppState: ObservableObject {
     var defaultPadWithTransparency: Bool { settings.defaultPadWithTransparency }
     var defaultSkipFaceDetection: Bool { settings.defaultSkipFaceDetection }
     var defaultPreferPaddingOverCrop: Bool { settings.defaultPreferPaddingOverCrop }
+    var defaultSegmentationMode: LoRAPrepConfiguration.SegmentationMode { settings.defaultSegmentationMode }
+    var defaultMaskFeather: Double { settings.defaultMaskFeather }
+    var defaultMaskErosion: Double { settings.defaultMaskErosion }
     var defaultMaximizeSubjectFill: Bool { settings.defaultMaximizeSubjectFill }
 
     var isReadyToProcess: Bool {
@@ -54,6 +60,9 @@ final class AppState: ObservableObject {
         padWithTransparency = settings.defaultPadWithTransparency
         skipFaceDetection = settings.defaultSkipFaceDetection
         preferPaddingOverCrop = settings.defaultPreferPaddingOverCrop
+        segmentationMode = segmentationModeIsAvailable(settings.defaultSegmentationMode) ? settings.defaultSegmentationMode : .automatic
+        maskFeather = settings.defaultMaskFeather
+        maskErosion = settings.defaultMaskErosion
         maximizeSubjectFill = settings.defaultMaximizeSubjectFill
 
         if let storedURL = settings.loadSuperResModelURL() {
@@ -101,6 +110,31 @@ final class AppState: ObservableObject {
             .dropFirst()
             .receive(on: RunLoop.main)
             .sink { [weak self] value in self?.preferPaddingOverCrop = value }
+            .store(in: &cancellables)
+
+        settings.$defaultSegmentationMode
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] value in
+                guard let self else { return }
+                if segmentationModeIsAvailable(value) {
+                    self.segmentationMode = value
+                } else {
+                    self.segmentationMode = .automatic
+                }
+            }
+            .store(in: &cancellables)
+
+        settings.$defaultMaskFeather
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] value in self?.maskFeather = value }
+            .store(in: &cancellables)
+
+        settings.$defaultMaskErosion
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] value in self?.maskErosion = value }
             .store(in: &cancellables)
 
         settings.$defaultMaximizeSubjectFill
@@ -184,6 +218,9 @@ final class AppState: ObservableObject {
         padWithTransparency = settings.defaultPadWithTransparency
         skipFaceDetection = settings.defaultSkipFaceDetection
         preferPaddingOverCrop = settings.defaultPreferPaddingOverCrop
+        segmentationMode = segmentationModeIsAvailable(settings.defaultSegmentationMode) ? settings.defaultSegmentationMode : .automatic
+        maskFeather = settings.defaultMaskFeather
+        maskErosion = settings.defaultMaskErosion
         maximizeSubjectFill = settings.defaultMaximizeSubjectFill
     }
 
@@ -210,7 +247,10 @@ final class AppState: ObservableObject {
             padWithTransparency: padWithTransparency,
             skipFaceDetection: skipFaceDetection,
             preferPaddingOverCrop: preferPaddingOverCrop,
-            maximizeSubjectFill: maximizeSubjectFill
+            maximizeSubjectFill: maximizeSubjectFill,
+            segmentationMode: segmentationMode,
+            maskFeather: CGFloat(maskFeather),
+            maskErosion: CGFloat(maskErosion)
         )
 
         Task.detached(priority: .userInitiated) { [configuration, weak self] in
@@ -226,20 +266,20 @@ final class AppState: ObservableObject {
                     }
                 }
                 await MainActor.run {
-                    guard let self else { return }
-                    self.outputDirectory = result.outputDirectory
-                    self.results = result.images.map { ResultPair(original: $0.originalURL, processed: $0.processedURL) }
-                    self.failures = result.failures
-                    self.isProcessing = false
-                    self.progressFraction = 1
-                    self.progressMessage = self.resultSummary(for: result)
+                    guard let strongSelf = self else { return }
+                    strongSelf.outputDirectory = result.outputDirectory
+                    strongSelf.results = result.images.map { ResultPair(original: $0.originalURL, processed: $0.processedURL) }
+                    strongSelf.failures = result.failures
+                    strongSelf.isProcessing = false
+                    strongSelf.progressFraction = 1
+                    strongSelf.progressMessage = strongSelf.resultSummary(for: result)
                 }
             } catch {
                 await MainActor.run {
-                    guard let self else { return }
-                    self.isProcessing = false
-                    self.progressMessage = ""
-                    self.errorAlert = IdentifiableError(message: error.localizedDescription)
+                    guard let strongSelf = self else { return }
+                    strongSelf.isProcessing = false
+                    strongSelf.progressMessage = ""
+                    strongSelf.errorAlert = IdentifiableError(message: error.localizedDescription)
                 }
             }
         }

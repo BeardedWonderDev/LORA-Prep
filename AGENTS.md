@@ -33,6 +33,8 @@ Quick-start command sequence:
 - `--skip-face-detection`
 - `--pad-instead-of-crop` — scale the long edge to fit and add padding instead of center-cropping when the image exceeds the target.
 - `--maximize-subject` — after background removal (or when transparency already exists), crop and scale the remaining subject so it fills the frame without trimming it.
+- `--segmentation-mode <automatic|accurateVision|deepLabV3|robustVideoMatting>`
+- `--mask-feather <pixels>` / `--mask-erosion <pixels>`
 
 ## Coding Style & Naming Conventions
 Stick to four-space indentation, trailing commas where they clarify multi-line literals, and `// MARK:` dividers for major sections. Provide testable helper functions around Vision/Core Image calls and keep side effects at the CLI boundary. Introduce new flags in lower kebab-case (`--remove-background`) while backing properties remain camelCase. Reuse `normLoraName` for filename-safe tokens instead of reimplementing casing rules.
@@ -45,3 +47,5 @@ Write imperative, present-tense subjects (`Add Vision rotation sampling`) and us
 
 ## Environment & Security Notes
 The tool processes images locally; do not add network calls or cloud storage hooks. Preserve EXIF stripping by routing new outputs through `writePNG` (or a metadata-free equivalent), and avoid persisting user-provided source photos in the repository. If you touch the Vision segmentation path, confirm it still runs within macOS sandbox expectations and does not attempt to load external models. When working with super-resolution, note the default model bundle in `package/CompiledModels/` and ensure custom model paths are user-specified (`--superres-model` or via app settings).
+
+When you need portrait mattes or depth data, keep photos in their original HEIC/Apple ProRAW containers (use “Export Unmodified Original” from Photos). PNG/JPEG exports strip the auxiliary attachments, so `loadAuxiliaryAssets` will return empty data.

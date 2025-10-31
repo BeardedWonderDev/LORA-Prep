@@ -12,6 +12,13 @@ private let ctx = CIContext(options: [.useSoftwareRenderer: false])
 // MARK: - Public API
 
 public struct LoRAPrepConfiguration {
+    public enum SegmentationMode: String, Codable, CaseIterable {
+        case automatic
+        case accurateVision
+        case deepLabV3
+        case robustVideoMatting
+    }
+
     public var inputFolder: URL
     public var loraName: String
     public var size: CGFloat
@@ -22,6 +29,9 @@ public struct LoRAPrepConfiguration {
     public var fileExtensions: Set<String>
     public var preferPaddingOverCrop: Bool
     public var maximizeSubjectFill: Bool
+    public var segmentationMode: SegmentationMode
+    public var maskFeather: CGFloat
+    public var maskErosion: CGFloat
 
     public init(
         inputFolder: URL,
@@ -33,7 +43,10 @@ public struct LoRAPrepConfiguration {
         skipFaceDetection: Bool = false,
         fileExtensions: Set<String> = ["jpg","jpeg","png","heic","tif","tiff","webp"],
         preferPaddingOverCrop: Bool = false,
-        maximizeSubjectFill: Bool = false
+        maximizeSubjectFill: Bool = false,
+        segmentationMode: SegmentationMode = .automatic,
+        maskFeather: CGFloat = 0,
+        maskErosion: CGFloat = 0
     ) {
         self.inputFolder = inputFolder
         self.loraName = loraName
@@ -45,6 +58,9 @@ public struct LoRAPrepConfiguration {
         self.fileExtensions = fileExtensions
         self.preferPaddingOverCrop = preferPaddingOverCrop
         self.maximizeSubjectFill = maximizeSubjectFill
+        self.segmentationMode = segmentationMode
+        self.maskFeather = max(0, maskFeather)
+        self.maskErosion = max(0, maskErosion)
     }
 }
 
@@ -95,6 +111,9 @@ public final class LoRAPrepPipeline {
     private let configuration: LoRAPrepConfiguration
     private let superResEngine: SuperResolutionEngine?
     private let fileManager: FileManager
+    private let primarySegmentationEngine: (any SegmentationEngine)?
+    private let fallbackSegmentationEngine: any SegmentationEngine
+    private let maskOptions: MaskCompositionOptions
 
     public init(configuration: LoRAPrepConfiguration, fileManager: FileManager = .default) throws {
         self.configuration = configuration
@@ -104,6 +123,24 @@ public final class LoRAPrepPipeline {
         } else {
             self.superResEngine = nil
         }
+
+        self.fallbackSegmentationEngine = VisionSegmentationEngine(quality: .balanced)
+        if segmentationModeIsAvailable(configuration.segmentationMode) {
+            switch configuration.segmentationMode {
+            case .automatic:
+                self.primarySegmentationEngine = VisionSegmentationEngine(quality: .balanced)
+            case .accurateVision:
+                self.primarySegmentationEngine = VisionSegmentationEngine(quality: .accurate)
+            case .deepLabV3:
+                self.primarySegmentationEngine = try? DeepLabSegmentationEngine()
+            case .robustVideoMatting:
+                self.primarySegmentationEngine = try? RobustVideoMattingEngine()
+            }
+        } else {
+            self.primarySegmentationEngine = nil
+        }
+        self.maskOptions = MaskCompositionOptions(featherRadius: configuration.maskFeather,
+                                                  erosionRadius: configuration.maskErosion)
     }
 
     public func run(progress: ((ProgressUpdate) -> Void)? = nil) throws -> LoRAPrepResult {
@@ -152,6 +189,8 @@ public final class LoRAPrepPipeline {
         var (ci, _) = try loadCIImage(inputURL)
         ci = ci.transformed(by: CGAffineTransform(translationX: -ci.extent.minX, y: -ci.extent.minY))
 
+        let auxiliary = configuration.removeBackground ? loadAuxiliaryAssets(for: inputURL) : .empty
+
         let detectedFace: FaceBox?
         if configuration.skipFaceDetection {
             detectedFace = nil
@@ -177,17 +216,40 @@ public final class LoRAPrepPipeline {
         working = ensureTargetSize(for: working, target: configuration.size, preferPaddingOverCrop: configuration.preferPaddingOverCrop)
 
         let backgroundRemoved: CIImage
-        if configuration.removeBackground, #available(macOS 12.0, *), let mask = try? personMask(for: working) {
-            let transparent = backgroundImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0), size: CGSize(width: configuration.size, height: configuration.size))
-            backgroundRemoved = working.applyingFilter("CIBlendWithMask", parameters: [
-                kCIInputBackgroundImageKey: transparent,
-                kCIInputMaskImageKey: mask
-            ])
+        if configuration.removeBackground {
+            var primaryMask: CIImage? = nil
+            if let engine = primarySegmentationEngine {
+                do {
+                    primaryMask = try engine.mask(for: working)
+                } catch {
+                    primaryMask = try? fallbackSegmentationEngine.mask(for: working)
+                }
+            } else {
+                primaryMask = try? fallbackSegmentationEngine.mask(for: working)
+            }
+            let composite = compositeMask(
+                visionMask: primaryMask,
+                auxiliary: auxiliary,
+                targetExtent: working.extent.standardized,
+                feather: maskOptions.featherRadius,
+                erosion: maskOptions.erosionRadius
+            )
+            if let mask = composite {
+                let transparent = backgroundImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0), size: CGSize(width: configuration.size, height: configuration.size))
+                backgroundRemoved = working.applyingFilter("CIBlendWithMask", parameters: [
+                    kCIInputBackgroundImageKey: transparent,
+                    kCIInputMaskImageKey: mask
+                ])
+            } else {
+                backgroundRemoved = working
+            }
         } else {
             backgroundRemoved = working
         }
 
-        let final = maximizeSubjectFillIfNeeded(image: backgroundRemoved, target: configuration.size, preferPaddingOverCrop: configuration.preferPaddingOverCrop, enabled: configuration.maximizeSubjectFill)
+        let final = maximizeSubjectFillIfNeeded(image: backgroundRemoved,
+                                                target: configuration.size,
+                                                enabled: configuration.maximizeSubjectFill)
 
         let rect = CGRect(x: final.extent.origin.x, y: final.extent.origin.y, width: configuration.size, height: configuration.size)
         guard let cg = ctx.createCGImage(final.cropped(to: rect), from: rect, format: .RGBA8, colorSpace: CGColorSpaceCreateDeviceRGB()) else {
@@ -229,7 +291,6 @@ public final class LoRAPrepPipeline {
 
     private func maximizeSubjectFillIfNeeded(image: CIImage,
                                              target: CGFloat,
-                                             preferPaddingOverCrop: Bool,
                                              enabled: Bool) -> CIImage {
         guard enabled else { return image }
         guard let bounding = alphaBoundingBox(of: image) else { return image }
@@ -591,9 +652,10 @@ private func detectLargestFace(in ci: CIImage) throws -> FaceBox? {
 }
 
 @available(macOS 12.0, *)
-private func personMask(for ci: CIImage) throws -> CIImage? {
+func visionMask(for ci: CIImage,
+                quality: VNGeneratePersonSegmentationRequest.QualityLevel) throws -> CIImage? {
     let req = VNGeneratePersonSegmentationRequest()
-    req.qualityLevel = .accurate
+    req.qualityLevel = quality
     req.outputPixelFormat = kCVPixelFormatType_OneComponent8
     let handler = VNImageRequestHandler(ciImage: ci, options: [:])
     try handler.perform([req])
