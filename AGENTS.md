@@ -25,6 +25,14 @@ Quick-start command sequence:
 - `xcodebuild -project app/LoraPrep/LoraPrep.xcodeproj -scheme LoraPrep -configuration Debug build` — ensure the macOS UI target compiles with Xcode’s toolchain.
 - Optional: `DEBUG=1 ./loraPrep.sh` — compare legacy behavior when investigating regressions.
 
+### CLI Flag Reference
+- `--remove-background` / `-b`
+- `--size <pixels>` / `-s`
+- `--superres-model <path>`
+- `--pad-transparent` (default) / `--pad-edge-color`
+- `--skip-face-detection`
+- `--pad-instead-of-crop` — scale the long edge to fit and add padding instead of center-cropping when the image exceeds the target.
+
 ## Coding Style & Naming Conventions
 Stick to four-space indentation, trailing commas where they clarify multi-line literals, and `// MARK:` dividers for major sections. Provide testable helper functions around Vision/Core Image calls and keep side effects at the CLI boundary. Introduce new flags in lower kebab-case (`--remove-background`) while backing properties remain camelCase. Reuse `normLoraName` for filename-safe tokens instead of reimplementing casing rules.
 

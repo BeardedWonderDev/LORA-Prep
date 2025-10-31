@@ -8,6 +8,7 @@ final class SettingsStore: ObservableObject {
         static let skipFaceDetection = "settings.defaultSkipFaceDetection"
         static let superResModelPath = "settings.superResModelPath"
         static let superResModelBookmark = "settings.superResModelBookmark"
+        static let preferPaddingOverCrop = "settings.defaultPreferPaddingOverCrop"
     }
 
     private let defaults: UserDefaults
@@ -22,6 +23,10 @@ final class SettingsStore: ObservableObject {
 
     @Published var defaultSkipFaceDetection: Bool {
         didSet { defaults.set(defaultSkipFaceDetection, forKey: Keys.skipFaceDetection) }
+    }
+
+    @Published var defaultPreferPaddingOverCrop: Bool {
+        didSet { defaults.set(defaultPreferPaddingOverCrop, forKey: Keys.preferPaddingOverCrop) }
     }
 
     @Published var superResModelPath: String? {
@@ -54,6 +59,7 @@ final class SettingsStore: ObservableObject {
         defaultRemoveBackground = defaults.bool(forKey: Keys.removeBackground)
         defaultPadWithTransparency = defaults.bool(forKey: Keys.padWithTransparency)
         defaultSkipFaceDetection = defaults.bool(forKey: Keys.skipFaceDetection)
+        defaultPreferPaddingOverCrop = defaults.bool(forKey: Keys.preferPaddingOverCrop)
         superResModelPath = defaults.string(forKey: Keys.superResModelPath)
         superResModelBookmark = defaults.data(forKey: Keys.superResModelBookmark)
     }

@@ -24,6 +24,7 @@ This document breaks down the work required to turn the Swift CLI pipeline into 
 1. Add toggles to `LoRAPrepConfiguration` for behaviors only available in the legacy script:
    - `padWithTransparency` (default `true`, but allows colored padding).
    - `skipFaceDetection` (default `false` to match CLI).
+   - `preferPaddingOverCrop` (default `false`, lets users retain the full frame with padded borders instead of center-cropping).
 2. Update shared pipeline functions to respect these toggles (reusing existing helper code from `loraPrep.sh` where necessary).
 3. Create `Tests/LoRAPrepCoreTests/PipelineConfigTests.swift` covering padding mode and face-detection bypass scenarios with deterministic CIImage fixtures.
 4. Run `swift test`.
@@ -58,7 +59,7 @@ This document breaks down the work required to turn the Swift CLI pipeline into 
    - Slider + stepper for size (512–2048) with live label.
    - Toggle for `removeBackground` (gated on macOS 12 availability).
    - File picker for super-resolution model filtering `.mlmodel`/`.mlmodelc`.
-   - Toggles for `padWithTransparency`, `skipFaceDetection`.
+   - Toggles for `padWithTransparency`, `skipFaceDetection`, and `preferPaddingOverCrop`.
 2. Wire controls to `AppState` bindings.
 3. Manual test: run app, confirm controls update state as expected.
 

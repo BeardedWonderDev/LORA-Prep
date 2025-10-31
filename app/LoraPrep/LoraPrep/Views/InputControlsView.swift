@@ -73,6 +73,10 @@ struct InputControlsView: View {
                                    binding: $model.skipFaceDetection,
                                    defaultValue: settings.defaultSkipFaceDetection,
                                    help: "Bypass Vision face detection and use simple center crop/pad instead.")
+                    advancedToggle(title: "Prefer padding over center crop",
+                                   binding: $model.preferPaddingOverCrop,
+                                   defaultValue: settings.defaultPreferPaddingOverCrop,
+                                   help: "Scale longer edges to fit and add padding instead of center-cropping when images are larger than the target size.")
                     Divider()
                     HStack {
                         Button("Reset to defaults") {

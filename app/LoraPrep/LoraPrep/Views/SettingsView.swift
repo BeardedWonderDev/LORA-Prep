@@ -28,6 +28,7 @@ struct SettingsView: View {
                 Toggle("Remove background by default", isOn: $settings.defaultRemoveBackground)
                 Toggle("Pad with transparency by default", isOn: $settings.defaultPadWithTransparency)
                 Toggle("Skip face detection by default", isOn: $settings.defaultSkipFaceDetection)
+                Toggle("Prefer padding over center crop by default", isOn: $settings.defaultPreferPaddingOverCrop)
                 Text("Defaults apply on launch. Adjust per-run values under Advanced Options in the main window.")
                     .font(.caption)
                     .foregroundColor(.secondary)

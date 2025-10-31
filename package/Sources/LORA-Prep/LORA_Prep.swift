@@ -10,6 +10,7 @@ struct Args {
     var superResModel: URL?
     var padWithTransparency: Bool = true
     var skipFaceDetection: Bool = false
+    var preferPaddingOverCrop: Bool = false
 
     static func parse() -> Args? {
         var input: URL?
@@ -19,6 +20,7 @@ struct Args {
         var superResModel: URL?
         var padTransparent = true
         var skipFaceDetection = false
+        var preferPaddingOverCrop = false
 
         var it = CommandLine.arguments.dropFirst().makeIterator()
         while let a = it.next() {
@@ -41,6 +43,8 @@ struct Args {
                 padTransparent = false
             case "--skip-face-detection":
                 skipFaceDetection = true
+            case "--pad-instead-of-crop":
+                preferPaddingOverCrop = true
             case "--help", "-h":
                 printUsage()
                 return nil
@@ -58,6 +62,7 @@ struct Args {
         args.superResModel = superResModel
         args.padWithTransparency = padTransparent
         args.skipFaceDetection = skipFaceDetection
+        args.preferPaddingOverCrop = preferPaddingOverCrop
         return args
     }
 
@@ -74,6 +79,7 @@ struct Args {
               --pad-transparent              Pad with transparent pixels (default)
               --pad-edge-color               Pad with average edge color (opaque)
               --skip-face-detection          Bypass Vision face detection and center crop/pad
+              --pad-instead-of-crop          Always scale & pad instead of center cropping when images are larger than target
               --help, -h                     Show this help message
             """
         )
@@ -91,7 +97,8 @@ func runCLI() {
         removeBackground: args.removeBackground,
         superResModelURL: args.superResModel,
         padWithTransparency: args.padWithTransparency,
-        skipFaceDetection: args.skipFaceDetection
+        skipFaceDetection: args.skipFaceDetection,
+        preferPaddingOverCrop: args.preferPaddingOverCrop
     )
 
     do {

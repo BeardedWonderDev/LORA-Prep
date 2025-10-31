@@ -20,6 +20,7 @@ public struct LoRAPrepConfiguration {
     public var padWithTransparency: Bool
     public var skipFaceDetection: Bool
     public var fileExtensions: Set<String>
+    public var preferPaddingOverCrop: Bool
 
     public init(
         inputFolder: URL,
@@ -29,7 +30,8 @@ public struct LoRAPrepConfiguration {
         superResModelURL: URL? = nil,
         padWithTransparency: Bool = true,
         skipFaceDetection: Bool = false,
-        fileExtensions: Set<String> = ["jpg","jpeg","png","heic","tif","tiff","webp"]
+        fileExtensions: Set<String> = ["jpg","jpeg","png","heic","tif","tiff","webp"],
+        preferPaddingOverCrop: Bool = false
     ) {
         self.inputFolder = inputFolder
         self.loraName = loraName
@@ -39,6 +41,7 @@ public struct LoRAPrepConfiguration {
         self.padWithTransparency = padWithTransparency
         self.skipFaceDetection = skipFaceDetection
         self.fileExtensions = fileExtensions
+        self.preferPaddingOverCrop = preferPaddingOverCrop
     }
 }
 
@@ -168,17 +171,22 @@ public final class LoRAPrepPipeline {
             working = engine.upscaleUntilShortSideMeetsTarget(working, target: configuration.size)
         }
 
-        if min(working.extent.width, working.extent.height) + 0.5 >= configuration.size {
-            working = scaleShortSide(working, to: configuration.size)
-            let ext = working.extent.standardized
-            if ext.width >= configuration.size - 0.5 && ext.height >= configuration.size - 0.5 {
-                working = centerCropSquare(working, size: configuration.size)
-            } else {
-                working = padToSquare(working, size: configuration.size, padColor: paddingColor(for: working))
-            }
-        } else {
+        if configuration.preferPaddingOverCrop {
             working = scaleLongSide(working, to: configuration.size)
             working = padToSquare(working, size: configuration.size, padColor: paddingColor(for: working))
+        } else {
+            if min(working.extent.width, working.extent.height) + 0.5 >= configuration.size {
+                working = scaleShortSide(working, to: configuration.size)
+                let ext = working.extent.standardized
+                if ext.width >= configuration.size - 0.5 && ext.height >= configuration.size - 0.5 {
+                    working = centerCropSquare(working, size: configuration.size)
+                } else {
+                    working = padToSquare(working, size: configuration.size, padColor: paddingColor(for: working))
+                }
+            } else {
+                working = scaleLongSide(working, to: configuration.size)
+                working = padToSquare(working, size: configuration.size, padColor: paddingColor(for: working))
+            }
         }
 
         let final: CIImage

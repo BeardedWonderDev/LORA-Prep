@@ -19,6 +19,7 @@ final class AppState: ObservableObject {
     @Published var removeBackground: Bool
     @Published var padWithTransparency: Bool
     @Published var skipFaceDetection: Bool
+    @Published var preferPaddingOverCrop: Bool
     @Published var superResModelURL: URL?
 
     // MARK: - Processing state
@@ -38,6 +39,7 @@ final class AppState: ObservableObject {
     var defaultRemoveBackground: Bool { settings.defaultRemoveBackground }
     var defaultPadWithTransparency: Bool { settings.defaultPadWithTransparency }
     var defaultSkipFaceDetection: Bool { settings.defaultSkipFaceDetection }
+    var defaultPreferPaddingOverCrop: Bool { settings.defaultPreferPaddingOverCrop }
 
     var isReadyToProcess: Bool {
         guard let _ = inputFolder else { return false }
@@ -49,6 +51,7 @@ final class AppState: ObservableObject {
         removeBackground = settings.defaultRemoveBackground
         padWithTransparency = settings.defaultPadWithTransparency
         skipFaceDetection = settings.defaultSkipFaceDetection
+        preferPaddingOverCrop = settings.defaultPreferPaddingOverCrop
 
         if let storedURL = settings.loadSuperResModelURL() {
             let sanitized = sanitizedFileURL(storedURL)
@@ -89,6 +92,12 @@ final class AppState: ObservableObject {
             .dropFirst()
             .receive(on: RunLoop.main)
             .sink { [weak self] value in self?.skipFaceDetection = value }
+            .store(in: &cancellables)
+
+        settings.$defaultPreferPaddingOverCrop
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] value in self?.preferPaddingOverCrop = value }
             .store(in: &cancellables)
     }
 
@@ -165,6 +174,7 @@ final class AppState: ObservableObject {
         removeBackground = settings.defaultRemoveBackground
         padWithTransparency = settings.defaultPadWithTransparency
         skipFaceDetection = settings.defaultSkipFaceDetection
+        preferPaddingOverCrop = settings.defaultPreferPaddingOverCrop
     }
 
     func startProcessing() {
@@ -188,7 +198,8 @@ final class AppState: ObservableObject {
             removeBackground: removeBackground,
             superResModelURL: superResModelURL,
             padWithTransparency: padWithTransparency,
-            skipFaceDetection: skipFaceDetection
+            skipFaceDetection: skipFaceDetection,
+            preferPaddingOverCrop: preferPaddingOverCrop
         )
 
         Task.detached(priority: .userInitiated) { [configuration, weak self] in

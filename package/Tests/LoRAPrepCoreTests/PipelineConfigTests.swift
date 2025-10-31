@@ -66,6 +66,54 @@ final class PipelineConfigTests: XCTestCase {
         XCTAssertEqual(alpha, 0, "Corner pixel should be transparent when padding transparently")
     }
 
+    func testPreferPaddingOverCropAddsTransparentBorder() throws {
+        let tempRoot = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let inputDir = tempRoot.appendingPathComponent("input", isDirectory: true)
+        try fm.createDirectory(at: inputDir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: tempRoot) }
+
+        let source = inputDir.appendingPathComponent("large.png")
+        try writeSolidImage(color: CIColor(red: 0.6, green: 0.4, blue: 0.2, alpha: 1),
+                            size: CGSize(width: 800, height: 600),
+                            to: source)
+
+        let baseConfig = LoRAPrepConfiguration(
+            inputFolder: inputDir,
+            loraName: "sample",
+            size: 256,
+            removeBackground: false,
+            superResModelURL: nil,
+            padWithTransparency: true,
+            skipFaceDetection: true
+        )
+
+        // Baseline: default behavior crops rather than pads, so the corner stays opaque.
+        do {
+            let pipeline = try LoRAPrepPipeline(configuration: baseConfig)
+            let result = try pipeline.run()
+            let processedURL = try XCTUnwrap(result.images.first?.processedURL)
+            XCTAssertEqual(try extractAlphaAtCorner(of: processedURL), 255)
+        }
+
+        // Preferred padding: forces scale-long-side + padding, so the corner is transparent.
+        do {
+            let paddedConfig = LoRAPrepConfiguration(
+                inputFolder: inputDir,
+                loraName: "sample2",
+                size: 256,
+                removeBackground: false,
+                superResModelURL: nil,
+                padWithTransparency: true,
+                skipFaceDetection: true,
+                preferPaddingOverCrop: true
+            )
+            let pipeline = try LoRAPrepPipeline(configuration: paddedConfig)
+            let result = try pipeline.run()
+            let processedURL = try XCTUnwrap(result.images.first?.processedURL)
+            XCTAssertEqual(try extractAlphaAtCorner(of: processedURL), 0)
+        }
+    }
+
     // MARK: - Helpers
 
     private func writeSolidImage(color: CIColor, size: CGSize, to url: URL) throws {

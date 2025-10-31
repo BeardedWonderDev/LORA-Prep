@@ -10,7 +10,7 @@ The `LoraPrep` SwiftUI app wraps the shared `LoRAPrepCore` pipeline with a deskt
 4. Adjust options:
    - Output size (512–2048 px).
    - Background removal toggle (Vision segmentation, macOS 12+).
-   - Padding mode (transparent vs. edge color) and optional face-detection bypass.
+   - Padding mode (transparent vs. edge color), optional face-detection bypass, and the **Prefer padding over center crop** toggle to retain full frames.
 5. On first launch the app will prompt you to choose a `.mlmodelc` (or `.mlmodel`) bundle; the selection is remembered. Use **LoRAPrep ▸ Settings…** (⌘,) to change or clear it later.
 6. Press **Process Images** to start the pipeline. Progress appears inline; the button disables until processing finishes.
 
@@ -27,6 +27,7 @@ The `LoraPrep` SwiftUI app wraps the shared `LoRAPrepCore` pipeline with a deskt
 - ✅ UI launch/build: Xcode project links `LoRAPrepCore` (add via **File ▸ Add Packages…** pointing to the repo root).
 - ✅ Folder selection & validation: empty selections prompt inline error; LoRA name normalization surfaces in UI.
 - ✅ Processing flow: run with background removal on/off, transparency vs. edge-color padding, skip-face-detection toggled. Verify the Advanced Options disclosure reflects overrides and the **Reset to defaults** button re-applies Settings values.
+- ✅ Padding preference: toggle **Prefer padding over center crop** and confirm outputs keep the full frame with border padding instead of cropping.
 - ✅ Optional super-resolution: first-launch prompt appears, future launches reuse the saved path, and Settings allows changing/clearing the model. Cancelled or missing bundles should re-trigger the prompt on next launch.
 - ✅ Results review: side-by-side thumbnails display, Finder reveal works for both originals and processed outputs, failure callouts list any errors.
 
