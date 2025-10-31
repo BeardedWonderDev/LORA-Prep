@@ -265,21 +265,23 @@ final class AppState: ObservableObject {
                         self?.handle(progress: update)
                     }
                 }
-                await MainActor.run {
-                    guard let strongSelf = self else { return }
-                    strongSelf.outputDirectory = result.outputDirectory
-                    strongSelf.results = result.images.map { ResultPair(original: $0.originalURL, processed: $0.processedURL) }
-                    strongSelf.failures = result.failures
-                    strongSelf.isProcessing = false
-                    strongSelf.progressFraction = 1
-                    strongSelf.progressMessage = strongSelf.resultSummary(for: result)
+                if let strongSelf = self {
+                    await MainActor.run {
+                        strongSelf.outputDirectory = result.outputDirectory
+                        strongSelf.results = result.images.map { ResultPair(original: $0.originalURL, processed: $0.processedURL) }
+                        strongSelf.failures = result.failures
+                        strongSelf.isProcessing = false
+                        strongSelf.progressFraction = 1
+                        strongSelf.progressMessage = strongSelf.resultSummary(for: result)
+                    }
                 }
             } catch {
-                await MainActor.run {
-                    guard let strongSelf = self else { return }
-                    strongSelf.isProcessing = false
-                    strongSelf.progressMessage = ""
-                    strongSelf.errorAlert = IdentifiableError(message: error.localizedDescription)
+                if let strongSelf = self {
+                    await MainActor.run {
+                        strongSelf.isProcessing = false
+                        strongSelf.progressMessage = ""
+                        strongSelf.errorAlert = IdentifiableError(message: error.localizedDescription)
+                    }
                 }
             }
         }

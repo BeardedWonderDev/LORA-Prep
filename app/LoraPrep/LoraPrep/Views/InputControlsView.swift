@@ -151,7 +151,9 @@ struct InputControlsView: View {
             }
         }
         .onAppear { ensureValidSegmentationMode() }
-        .onChange(of: model.segmentationMode) { _ in ensureValidSegmentationMode() }
+        .onChange(of: model.segmentationMode, initial: false) { _, newValue in
+            ensureValidSegmentationMode(for: newValue)
+        }
     }
 
     private var availableSegmentationModes: [LoRAPrepConfiguration.SegmentationMode] {
@@ -184,6 +186,13 @@ struct InputControlsView: View {
         guard !availableSegmentationModes.isEmpty else { return }
         if !segmentationModeIsAvailable(model.segmentationMode) {
             model.segmentationMode = availableSegmentationModes.first ?? .automatic
+        }
+    }
+
+    private func ensureValidSegmentationMode(for selection: LoRAPrepConfiguration.SegmentationMode) {
+        guard segmentationModeIsAvailable(selection) else {
+            model.segmentationMode = availableSegmentationModes.first ?? .automatic
+            return
         }
     }
 
