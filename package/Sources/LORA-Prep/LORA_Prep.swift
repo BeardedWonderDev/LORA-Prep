@@ -11,6 +11,7 @@ struct Args {
     var padWithTransparency: Bool = true
     var skipFaceDetection: Bool = false
     var preferPaddingOverCrop: Bool = false
+    var maximizeSubjectFill: Bool = false
 
     static func parse() -> Args? {
         var input: URL?
@@ -21,6 +22,7 @@ struct Args {
         var padTransparent = true
         var skipFaceDetection = false
         var preferPaddingOverCrop = false
+        var maximizeSubjectFill = false
 
         var it = CommandLine.arguments.dropFirst().makeIterator()
         while let a = it.next() {
@@ -45,6 +47,8 @@ struct Args {
                 skipFaceDetection = true
             case "--pad-instead-of-crop":
                 preferPaddingOverCrop = true
+            case "--maximize-subject":
+                maximizeSubjectFill = true
             case "--help", "-h":
                 printUsage()
                 return nil
@@ -63,6 +67,7 @@ struct Args {
         args.padWithTransparency = padTransparent
         args.skipFaceDetection = skipFaceDetection
         args.preferPaddingOverCrop = preferPaddingOverCrop
+        args.maximizeSubjectFill = maximizeSubjectFill
         return args
     }
 
@@ -80,6 +85,7 @@ struct Args {
               --pad-edge-color               Pad with average edge color (opaque)
               --skip-face-detection          Bypass Vision face detection and center crop/pad
               --pad-instead-of-crop          Always scale & pad instead of center cropping when images are larger than target
+              --maximize-subject             After background removal, crop/scale the subject to fill the frame without trimming it
               --help, -h                     Show this help message
             """
         )
@@ -98,7 +104,8 @@ func runCLI() {
         superResModelURL: args.superResModel,
         padWithTransparency: args.padWithTransparency,
         skipFaceDetection: args.skipFaceDetection,
-        preferPaddingOverCrop: args.preferPaddingOverCrop
+        preferPaddingOverCrop: args.preferPaddingOverCrop,
+        maximizeSubjectFill: args.maximizeSubjectFill
     )
 
     do {

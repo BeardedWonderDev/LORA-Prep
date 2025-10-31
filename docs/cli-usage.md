@@ -25,6 +25,15 @@ The `LoRAPrep` SwiftPM executable exposes the same pipeline used by the macOS ap
     --size 1024 \
     --pad-instead-of-crop
   ```
+- Maximize the subject after background removal so it fills the target square:
+  ```bash
+  swift run LoRAPrep -- \
+    --input ~/Pictures/lora-set \
+    --lora-name MyCharacter \
+    --size 1024 \
+    --remove-background \
+    --maximize-subject
+  ```
 
 Processed images land beside the source folder in a directory named `processed-<normalized-name>-<timestamp>`. The CLI opens the output folder in Finder on completion.
 
@@ -39,6 +48,7 @@ Processed images land beside the source folder in a directory named `processed-<
 - `--pad-edge-color` — fill padding with sampled edge color.
 - `--skip-face-detection` — bypass face detection, falling back to simple center cropping/padding.
 - `--pad-instead-of-crop` — scale by the long edge and add padding rather than center-cropping when the source already exceeds the target size.
+- `--maximize-subject` — after background removal (or when transparency exists), crop and scale the remaining subject to fill the frame without trimming it.
 - `--help` / `-h` — print usage information.
 
 Set `DEBUG=1` before the command to increase log verbosity (`DEBUG=1 swift run LoRAPrep -- …`). For parity investigations, compare outputs with the legacy `./loraPrep.sh` script in the project root.

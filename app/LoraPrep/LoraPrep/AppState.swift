@@ -20,6 +20,7 @@ final class AppState: ObservableObject {
     @Published var padWithTransparency: Bool
     @Published var skipFaceDetection: Bool
     @Published var preferPaddingOverCrop: Bool
+    @Published var maximizeSubjectFill: Bool
     @Published var superResModelURL: URL?
 
     // MARK: - Processing state
@@ -40,6 +41,7 @@ final class AppState: ObservableObject {
     var defaultPadWithTransparency: Bool { settings.defaultPadWithTransparency }
     var defaultSkipFaceDetection: Bool { settings.defaultSkipFaceDetection }
     var defaultPreferPaddingOverCrop: Bool { settings.defaultPreferPaddingOverCrop }
+    var defaultMaximizeSubjectFill: Bool { settings.defaultMaximizeSubjectFill }
 
     var isReadyToProcess: Bool {
         guard let _ = inputFolder else { return false }
@@ -52,6 +54,7 @@ final class AppState: ObservableObject {
         padWithTransparency = settings.defaultPadWithTransparency
         skipFaceDetection = settings.defaultSkipFaceDetection
         preferPaddingOverCrop = settings.defaultPreferPaddingOverCrop
+        maximizeSubjectFill = settings.defaultMaximizeSubjectFill
 
         if let storedURL = settings.loadSuperResModelURL() {
             let sanitized = sanitizedFileURL(storedURL)
@@ -98,6 +101,12 @@ final class AppState: ObservableObject {
             .dropFirst()
             .receive(on: RunLoop.main)
             .sink { [weak self] value in self?.preferPaddingOverCrop = value }
+            .store(in: &cancellables)
+
+        settings.$defaultMaximizeSubjectFill
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] value in self?.maximizeSubjectFill = value }
             .store(in: &cancellables)
     }
 
@@ -175,6 +184,7 @@ final class AppState: ObservableObject {
         padWithTransparency = settings.defaultPadWithTransparency
         skipFaceDetection = settings.defaultSkipFaceDetection
         preferPaddingOverCrop = settings.defaultPreferPaddingOverCrop
+        maximizeSubjectFill = settings.defaultMaximizeSubjectFill
     }
 
     func startProcessing() {
@@ -199,7 +209,8 @@ final class AppState: ObservableObject {
             superResModelURL: superResModelURL,
             padWithTransparency: padWithTransparency,
             skipFaceDetection: skipFaceDetection,
-            preferPaddingOverCrop: preferPaddingOverCrop
+            preferPaddingOverCrop: preferPaddingOverCrop,
+            maximizeSubjectFill: maximizeSubjectFill
         )
 
         Task.detached(priority: .userInitiated) { [configuration, weak self] in

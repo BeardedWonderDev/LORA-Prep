@@ -77,6 +77,10 @@ struct InputControlsView: View {
                                    binding: $model.preferPaddingOverCrop,
                                    defaultValue: settings.defaultPreferPaddingOverCrop,
                                    help: "Scale longer edges to fit and add padding instead of center-cropping when images are larger than the target size.")
+                    advancedToggle(title: "Maximize subject fill after background removal",
+                                   binding: $model.maximizeSubjectFill,
+                                   defaultValue: settings.defaultMaximizeSubjectFill,
+                                   help: "After removing the background, crop and scale the remaining subject so it fills the frame without trimming.")
                     Divider()
                     HStack {
                         Button("Reset to defaults") {

@@ -9,6 +9,7 @@ final class SettingsStore: ObservableObject {
         static let superResModelPath = "settings.superResModelPath"
         static let superResModelBookmark = "settings.superResModelBookmark"
         static let preferPaddingOverCrop = "settings.defaultPreferPaddingOverCrop"
+        static let maximizeSubjectFill = "settings.defaultMaximizeSubjectFill"
     }
 
     private let defaults: UserDefaults
@@ -27,6 +28,10 @@ final class SettingsStore: ObservableObject {
 
     @Published var defaultPreferPaddingOverCrop: Bool {
         didSet { defaults.set(defaultPreferPaddingOverCrop, forKey: Keys.preferPaddingOverCrop) }
+    }
+
+    @Published var defaultMaximizeSubjectFill: Bool {
+        didSet { defaults.set(defaultMaximizeSubjectFill, forKey: Keys.maximizeSubjectFill) }
     }
 
     @Published var superResModelPath: String? {
@@ -60,6 +65,7 @@ final class SettingsStore: ObservableObject {
         defaultPadWithTransparency = defaults.bool(forKey: Keys.padWithTransparency)
         defaultSkipFaceDetection = defaults.bool(forKey: Keys.skipFaceDetection)
         defaultPreferPaddingOverCrop = defaults.bool(forKey: Keys.preferPaddingOverCrop)
+        defaultMaximizeSubjectFill = defaults.bool(forKey: Keys.maximizeSubjectFill)
         superResModelPath = defaults.string(forKey: Keys.superResModelPath)
         superResModelBookmark = defaults.data(forKey: Keys.superResModelBookmark)
     }

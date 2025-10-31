@@ -32,6 +32,7 @@ Quick-start command sequence:
 - `--pad-transparent` (default) / `--pad-edge-color`
 - `--skip-face-detection`
 - `--pad-instead-of-crop` — scale the long edge to fit and add padding instead of center-cropping when the image exceeds the target.
+- `--maximize-subject` — after background removal (or when transparency already exists), crop and scale the remaining subject so it fills the frame without trimming it.
 
 ## Coding Style & Naming Conventions
 Stick to four-space indentation, trailing commas where they clarify multi-line literals, and `// MARK:` dividers for major sections. Provide testable helper functions around Vision/Core Image calls and keep side effects at the CLI boundary. Introduce new flags in lower kebab-case (`--remove-background`) while backing properties remain camelCase. Reuse `normLoraName` for filename-safe tokens instead of reimplementing casing rules.

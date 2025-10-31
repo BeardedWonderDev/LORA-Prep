@@ -21,6 +21,7 @@ public struct LoRAPrepConfiguration {
     public var skipFaceDetection: Bool
     public var fileExtensions: Set<String>
     public var preferPaddingOverCrop: Bool
+    public var maximizeSubjectFill: Bool
 
     public init(
         inputFolder: URL,
@@ -31,7 +32,8 @@ public struct LoRAPrepConfiguration {
         padWithTransparency: Bool = true,
         skipFaceDetection: Bool = false,
         fileExtensions: Set<String> = ["jpg","jpeg","png","heic","tif","tiff","webp"],
-        preferPaddingOverCrop: Bool = false
+        preferPaddingOverCrop: Bool = false,
+        maximizeSubjectFill: Bool = false
     ) {
         self.inputFolder = inputFolder
         self.loraName = loraName
@@ -42,6 +44,7 @@ public struct LoRAPrepConfiguration {
         self.skipFaceDetection = skipFaceDetection
         self.fileExtensions = fileExtensions
         self.preferPaddingOverCrop = preferPaddingOverCrop
+        self.maximizeSubjectFill = maximizeSubjectFill
     }
 }
 
@@ -171,34 +174,20 @@ public final class LoRAPrepPipeline {
             working = engine.upscaleUntilShortSideMeetsTarget(working, target: configuration.size)
         }
 
-        if configuration.preferPaddingOverCrop {
-            working = scaleLongSide(working, to: configuration.size)
-            working = padToSquare(working, size: configuration.size, padColor: paddingColor(for: working))
-        } else {
-            if min(working.extent.width, working.extent.height) + 0.5 >= configuration.size {
-                working = scaleShortSide(working, to: configuration.size)
-                let ext = working.extent.standardized
-                if ext.width >= configuration.size - 0.5 && ext.height >= configuration.size - 0.5 {
-                    working = centerCropSquare(working, size: configuration.size)
-                } else {
-                    working = padToSquare(working, size: configuration.size, padColor: paddingColor(for: working))
-                }
-            } else {
-                working = scaleLongSide(working, to: configuration.size)
-                working = padToSquare(working, size: configuration.size, padColor: paddingColor(for: working))
-            }
-        }
+        working = ensureTargetSize(for: working, target: configuration.size, preferPaddingOverCrop: configuration.preferPaddingOverCrop)
 
-        let final: CIImage
+        let backgroundRemoved: CIImage
         if configuration.removeBackground, #available(macOS 12.0, *), let mask = try? personMask(for: working) {
             let transparent = backgroundImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0), size: CGSize(width: configuration.size, height: configuration.size))
-            final = working.applyingFilter("CIBlendWithMask", parameters: [
+            backgroundRemoved = working.applyingFilter("CIBlendWithMask", parameters: [
                 kCIInputBackgroundImageKey: transparent,
                 kCIInputMaskImageKey: mask
             ])
         } else {
-            final = working
+            backgroundRemoved = working
         }
+
+        let final = maximizeSubjectFillIfNeeded(image: backgroundRemoved, target: configuration.size, preferPaddingOverCrop: configuration.preferPaddingOverCrop, enabled: configuration.maximizeSubjectFill)
 
         let rect = CGRect(x: final.extent.origin.x, y: final.extent.origin.y, width: configuration.size, height: configuration.size)
         guard let cg = ctx.createCGImage(final.cropped(to: rect), from: rect, format: .RGBA8, colorSpace: CGColorSpaceCreateDeviceRGB()) else {
@@ -213,6 +202,111 @@ public final class LoRAPrepPipeline {
         }
         return averageEdgeColor(of: image) ?? CIColor(red: 0, green: 0, blue: 0, alpha: 1)
     }
+
+    private func ensureTargetSize(for image: CIImage, target: CGFloat, preferPaddingOverCrop: Bool) -> CIImage {
+        var working = image
+        if preferPaddingOverCrop {
+            working = scaleLongSide(working, to: target)
+            let padColor = paddingColor(for: working)
+            return padToSquare(working, size: target, padColor: padColor)
+        }
+
+        if min(working.extent.width, working.extent.height) + 0.5 >= target {
+            working = scaleShortSide(working, to: target)
+            let ext = working.extent.standardized
+            if ext.width >= target - 0.5 && ext.height >= target - 0.5 {
+                return centerCropSquare(working, size: target)
+            } else {
+                let padColor = paddingColor(for: working)
+                return padToSquare(working, size: target, padColor: padColor)
+            }
+        } else {
+            working = scaleLongSide(working, to: target)
+            let padColor = paddingColor(for: working)
+            return padToSquare(working, size: target, padColor: padColor)
+        }
+    }
+
+    private func maximizeSubjectFillIfNeeded(image: CIImage,
+                                             target: CGFloat,
+                                             preferPaddingOverCrop: Bool,
+                                             enabled: Bool) -> CIImage {
+        guard enabled else { return image }
+        guard let bounding = alphaBoundingBox(of: image) else { return image }
+        let margin = max(4, target * 0.03)
+        var expanded = bounding.insetBy(dx: -margin, dy: -margin)
+        expanded = expanded.intersection(image.extent.standardized)
+        guard expanded.width > 0, expanded.height > 0 else { return image }
+
+        var subject = image.cropped(to: expanded)
+        subject = subject.transformed(by: CGAffineTransform(translationX: -expanded.minX, y: -expanded.minY))
+
+        let longSide = max(subject.extent.width, subject.extent.height)
+        if longSide > 0 {
+            let scale = target / longSide
+            let scaleTransform = CGAffineTransform(scaleX: scale, y: scale)
+            subject = subject.transformed(by: scaleTransform)
+        }
+
+        // Always pad with transparency to avoid reintroducing opaque borders.
+        let padded = padToSquare(subject,
+                                 size: target,
+                                 padColor: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
+
+        return padded
+    }
+}
+
+private func alphaBoundingBox(of image: CIImage) -> CGRect? {
+    let extent = image.extent.standardized
+    guard extent.width > 0, extent.height > 0 else { return nil }
+    guard let cg = ctx.createCGImage(image, from: extent, format: .RGBA8, colorSpace: CGColorSpaceCreateDeviceRGB()) else {
+        return nil
+    }
+
+    guard let data = cg.dataProvider?.data else { return nil }
+    guard let pointer = CFDataGetBytePtr(data) else { return nil }
+    let bytesPerRow = cg.bytesPerRow
+    let width = cg.width
+    let height = cg.height
+    let alphaThreshold: UInt8 = 16
+
+    var minX = width
+    var maxX = -1
+    var minY = height
+    var maxY = -1
+
+    for y in 0..<height {
+        let row = pointer + y * bytesPerRow
+        for x in 0..<width {
+            let alpha = row[x * 4 + 3]
+            if alpha > alphaThreshold {
+                if x < minX { minX = x }
+                if x > maxX { maxX = x }
+                if y < minY { minY = y }
+                if y > maxY { maxY = y }
+            }
+        }
+    }
+
+    if maxX < minX || maxY < minY {
+        return nil
+    }
+
+    let scaleX = extent.width / CGFloat(width)
+    let scaleY = extent.height / CGFloat(height)
+
+    let minXCIF = CGFloat(minX) * scaleX + extent.minX
+    let maxXCIF = CGFloat(maxX + 1) * scaleX + extent.minX
+
+    // Convert from top-left origin (pixel buffer) to Core Image's bottom-left origin.
+    let bottom = CGFloat(height - maxY - 1) * scaleY + extent.minY
+    let top = CGFloat(height - minY) * scaleY + extent.minY
+
+    return CGRect(x: minXCIF,
+                  y: bottom,
+                  width: maxXCIF - minXCIF,
+                  height: top - bottom)
 }
 
 // MARK: - Utilities
