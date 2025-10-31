@@ -9,6 +9,8 @@ final class AppState: ObservableObject {
     private let settings: SettingsStore
     private var cancellables: Set<AnyCancellable> = []
     private var hasPromptedForModelThisSession = false
+    private var inputFolderAccessStop: (() -> Void)?
+    private var superResModelAccessStop: (() -> Void)?
 
     // MARK: - User-configurable inputs
     @Published var inputFolder: URL?
@@ -48,13 +50,24 @@ final class AppState: ObservableObject {
         padWithTransparency = settings.defaultPadWithTransparency
         skipFaceDetection = settings.defaultSkipFaceDetection
 
-        if let path = settings.superResModelPath {
-            let url = URL(fileURLWithPath: path)
-            if FileManager.default.fileExists(atPath: url.path) {
-                superResModelURL = url
+        if let storedURL = settings.loadSuperResModelURL() {
+            let sanitized = sanitizedFileURL(storedURL)
+            let scope = startSecurityScope(for: sanitized)
+            let exists = FileManager.default.fileExists(atPath: sanitized.path)
+            scope?()
+            if exists {
+                superResModelURL = sanitized
+                refreshSuperResModelAccess(with: sanitized)
+                if settings.superResModelBookmark == nil {
+                    settings.persistSuperResModelURL(sanitized)
+                } else if settings.superResModelPath != sanitized.path {
+                    settings.superResModelPath = sanitized.path
+                }
             } else {
                 superResModelURL = nil
-                settings.superResModelPath = nil
+                superResModelAccessStop?()
+                superResModelAccessStop = nil
+                settings.clearSuperResModel()
             }
         } else {
             superResModelURL = nil
@@ -83,17 +96,26 @@ final class AppState: ObservableObject {
     func chooseInputFolder() {
         guard let panel = configuredOpenPanel(canChooseFiles: false, allowedTypes: nil) else { return }
         panel.message = "Select the folder containing your training photos."
-        if panel.runModal() == .OK {
-            inputFolder = panel.urls.first
+        if panel.runModal() == .OK, let selected = panel.urls.first {
+            let sanitized = sanitizedFileURL(selected)
+            inputFolderAccessStop?()
+            inputFolderAccessStop = startSecurityScope(for: sanitized)
+            inputFolder = sanitized
         }
     }
 
     func ensureSuperResModelAvailability() {
-        if let url = superResModelURL, !FileManager.default.fileExists(atPath: url.path) {
-            superResModelURL = nil
-            settings.superResModelPath = nil
-            errorAlert = IdentifiableError(message: "The previously selected super-resolution model could not be found. Please choose a new one.")
-            hasPromptedForModelThisSession = false
+        if let url = superResModelURL {
+            if !FileManager.default.fileExists(atPath: url.path) {
+                superResModelURL = nil
+                superResModelAccessStop?()
+                superResModelAccessStop = nil
+                settings.clearSuperResModel()
+                errorAlert = IdentifiableError(message: "The previously selected super-resolution model could not be found. Please choose a new one.")
+                hasPromptedForModelThisSession = false
+            } else if superResModelAccessStop == nil {
+                refreshSuperResModelAccess(with: url)
+            }
         }
 
         if superResModelURL == nil && !hasPromptedForModelThisSession {
@@ -116,9 +138,12 @@ final class AppState: ObservableObject {
         panel.message = reason ?? "Choose a Core ML super-resolution model (optional)."
         let response = panel.runModal()
         if response == .OK, let url = panel.urls.first {
-            if url.pathExtension == "mlmodelc" || url.pathExtension == "mlmodel" {
-                superResModelURL = url
-                settings.superResModelPath = url.path
+            let sanitized = sanitizedFileURL(url)
+            let ext = sanitized.pathExtension.lowercased()
+            if ext == "mlmodelc" || ext == "mlmodel" {
+                refreshSuperResModelAccess(with: sanitized)
+                superResModelURL = sanitized
+                settings.persistSuperResModelURL(sanitized)
             } else {
                 errorAlert = IdentifiableError(message: "Please select a .mlmodel or .mlmodelc bundle.")
                 if isLaunchPrompt { hasPromptedForModelThisSession = false }
@@ -129,8 +154,10 @@ final class AppState: ObservableObject {
     }
 
     func clearSuperResModel() {
+        superResModelAccessStop?()
+        superResModelAccessStop = nil
         superResModelURL = nil
-        settings.superResModelPath = nil
+        settings.clearSuperResModel()
         hasPromptedForModelThisSession = false
     }
 
@@ -145,6 +172,8 @@ final class AppState: ObservableObject {
             errorAlert = IdentifiableError(message: "Provide both an input folder and LoRA name before processing.")
             return
         }
+        let sessionInputAccess = startSecurityScope(for: inputFolder)
+        let sessionModelAccess = startSecurityScope(for: superResModelURL)
         isProcessing = true
         progressFraction = 0
         progressMessage = "Preparing…"
@@ -163,6 +192,10 @@ final class AppState: ObservableObject {
         )
 
         Task.detached(priority: .userInitiated) { [configuration, weak self] in
+            defer {
+                sessionInputAccess?()
+                sessionModelAccess?()
+            }
             do {
                 let pipeline = try LoRAPrepPipeline(configuration: configuration)
                 let result = try pipeline.run { update in
@@ -199,6 +232,11 @@ final class AppState: ObservableObject {
     }
 
     // MARK: - Private helpers
+    deinit {
+        inputFolderAccessStop?()
+        superResModelAccessStop?()
+    }
+
     private func configuredOpenPanel(canChooseFiles: Bool, allowedTypes: [UTType]?) -> NSOpenPanel? {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = !canChooseFiles
@@ -247,6 +285,26 @@ final class AppState: ObservableObject {
         } else {
             return "Processing complete: \(processedCount) succeeded, \(failureCount) failed."
         }
+    }
+
+    private func sanitizedFileURL(_ url: URL) -> URL {
+        guard url.lastPathComponent == "." else { return url }
+        var cleaned = url
+        cleaned.deleteLastPathComponent()
+        return cleaned
+    }
+
+    private func startSecurityScope(for url: URL?) -> (() -> Void)? {
+        guard let url else { return nil }
+        if url.startAccessingSecurityScopedResource() {
+            return { url.stopAccessingSecurityScopedResource() }
+        }
+        return nil
+    }
+
+    private func refreshSuperResModelAccess(with url: URL) {
+        superResModelAccessStop?()
+        superResModelAccessStop = startSecurityScope(for: url)
     }
 }
 

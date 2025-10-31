@@ -7,6 +7,7 @@ final class SettingsStore: ObservableObject {
         static let padWithTransparency = "settings.defaultPadWithTransparency"
         static let skipFaceDetection = "settings.defaultSkipFaceDetection"
         static let superResModelPath = "settings.superResModelPath"
+        static let superResModelBookmark = "settings.superResModelBookmark"
     }
 
     private let defaults: UserDefaults
@@ -33,6 +34,16 @@ final class SettingsStore: ObservableObject {
         }
     }
 
+    @Published var superResModelBookmark: Data? {
+        didSet {
+            if let bookmark = superResModelBookmark {
+                defaults.set(bookmark, forKey: Keys.superResModelBookmark)
+            } else {
+                defaults.removeObject(forKey: Keys.superResModelBookmark)
+            }
+        }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
 
@@ -44,5 +55,48 @@ final class SettingsStore: ObservableObject {
         defaultPadWithTransparency = defaults.bool(forKey: Keys.padWithTransparency)
         defaultSkipFaceDetection = defaults.bool(forKey: Keys.skipFaceDetection)
         superResModelPath = defaults.string(forKey: Keys.superResModelPath)
+        superResModelBookmark = defaults.data(forKey: Keys.superResModelBookmark)
+    }
+
+    func persistSuperResModelURL(_ url: URL) {
+        superResModelPath = url.path
+        do {
+            superResModelBookmark = try url.bookmarkData(options: [.withSecurityScope], includingResourceValuesForKeys: nil, relativeTo: nil)
+        } catch {
+            superResModelBookmark = nil
+        }
+    }
+
+    func clearSuperResModel() {
+        superResModelBookmark = nil
+        superResModelPath = nil
+    }
+
+    func loadSuperResModelURL() -> URL? {
+        if let bookmark = superResModelBookmark {
+            var stale = false
+            do {
+                let url = try URL(resolvingBookmarkData: bookmark, options: [.withSecurityScope], bookmarkDataIsStale: &stale)
+                if stale {
+                    persistSuperResModelURL(url)
+                }
+                return url
+            } catch {
+                superResModelBookmark = nil
+            }
+        }
+
+        if let path = superResModelPath {
+            let cleanedPath: String
+            if path.hasSuffix("/.") {
+                cleanedPath = String(path.dropLast(2))
+                superResModelPath = cleanedPath
+            } else {
+                cleanedPath = path
+            }
+            return URL(fileURLWithPath: cleanedPath)
+        }
+
+        return nil
     }
 }
